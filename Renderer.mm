@@ -6,11 +6,11 @@
 //  Copyright 2011 ModMash. All rights reserved.
 //
 
-#import "Renderer.h"
-#import "GLProgram.h"
-#import "GLMath.h"
-#import "MachineMashModel.h"
 #import <math.h>
+#import <cstdlib>
+#import "Renderer.h"
+#import "MachineMashModel.h"
+#import "PVRTexture.h"
 
 #define ZOOM_MIN 2.0
 #define ZOOM_MAX 60.0
@@ -98,6 +98,14 @@ Renderer* __es2Renderer = nil;
     self.internalRenderer->SetFlags(flags);
 }
 
+static PVRTexture* bmtex = nil;
+- (BOOL)loadTextures {
+    numberOfTextures = 1;
+    NSString* path = [[NSBundle mainBundle] pathForResource:@"text" ofType:@"pvr"];
+	bmtex = [[PVRTexture pvrTextureWithContentsOfFile:path] retain];
+    return YES;
+}
+
 - (BOOL)loadShaders {
     if (api == 1) {
         return NO;
@@ -133,6 +141,22 @@ Renderer* __es2Renderer = nil;
         return NO;
     }
     [GLProgram storeProgram:tempProg withIdentifier:@"main"];
+    
+    // texture shader
+    vShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"vsh"];
+    fShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"fsh"];
+	pUniforms = [NSArray arrayWithObjects:@"projection",@"modelview",@"sampler",@"color",nil];
+    tempProg = tempProg = [[GLProgram alloc] initWithVertexShader:vShaderPathname 
+                                                andFragmentShader:fShaderPathname 
+                                                      andUniforms:pUniforms
+                                                     andBindBlock:^(GLuint name) {
+                                                         glBindAttribLocation(name, GLProgramAttributePosition, "position");
+                                                         glBindAttribLocation(name, GLProgramAttributeTexCoord, "texcoord");
+                                                     }];
+    if (tempProg == nil) {
+        return NO;
+    }
+    [GLProgram storeProgram:tempProg withIdentifier:@"tex"];
     
     // 
     program = [GLProgram getProgramByIdentifier:@"main"];
@@ -209,6 +233,7 @@ Renderer* __es2Renderer = nil;
             mat4Scale(&modelview, zoomScale, zoomScale, 1.0);
             mat4Multiply(&modelview, &postMatrix);
             
+            [program use];
             glUniformMatrix4fv([program uniformLocationFor:@"projection"], 1, GL_FALSE, &projection[0]);
             glUniformMatrix4fv([program uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview[0]);
             
@@ -234,6 +259,92 @@ Renderer* __es2Renderer = nil;
     // clear our multiply matrix
     mat4LoadIdentity(&preMatrix);
     mat4LoadIdentity(&postMatrix);
+    
+    [self drawUserInterface];
+}
+
+- (void)drawTexturedGeomap:(geomap_ *)geom {
+	glUniform1f([[GLProgram getProgramByIdentifier:@"tex"] uniformLocationFor:@"sampler"], 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    // Update attribute values
+    glVertexAttribPointer(GLProgramAttributePosition, 2, GL_FLOAT, 0, 0, &geom->vertices[0]);
+    glEnableVertexAttribArray(GLProgramAttributePosition);
+    glVertexAttribPointer(GLProgramAttributeTexCoord, 2, GL_FLOAT, 1, 0, &geom->uvs[0]);
+    glEnableVertexAttribArray(GLProgramAttributeTexCoord);
+    // Draw
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, geom->numfloats/2.0);
+}
+
+- (void)drawUserInterface {
+    GLProgram* texP = [GLProgram getProgramByIdentifier:@"tex"];
+    [texP use];
+    
+    float halfwidth = [self screenWidth]/2.0;
+    float halfheight = [self screenHeight]/2.0;
+    
+    mat4 projection;
+    mat4LoadOrtho(&projection,-halfwidth, halfwidth, halfheight, -halfheight, -1.0, 1.0);
+    mat4 modelview;
+    mat4LoadIdentity(&modelview);
+	glUniformMatrix4fv([texP uniformLocationFor:@"projection"], 1, GL_FALSE, &projection[0]);
+	glUniformMatrix4fv([texP uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview[0]);
+    
+    spritesheet textsheet = spritesheetMake([bmtex name], [bmtex width], [bmtex height]);
+    spriteseq textseq = spriteseqMake(textsheet, 8, 8, 0, 3);
+    geomap_ textmap = geomapMakeFromSeqWithString(textseq, "MachineMash", 0);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textsheet.texture);
+    
+	rbga black = {0.0,0.0,0.0,1.0};
+	glUniform4fv([texP uniformLocationFor:@"color"], 1, black);
+    
+    [self drawTexturedGeomap:&textmap];
+    
+    destroy(&textmap);
+}
+
+#pragma -
+#pragma Texture
+
+- (spritesheet)loadTexture:(NSString*)imageName {
+    [[GLProgram getProgramByIdentifier:@"tex"] use];
+    
+    CGImageRef textureImage = [UIImage imageNamed:imageName].CGImage;
+    spritesheet* tex = (spritesheet*)calloc(sizeof(spritesheet), 1);
+    
+    if (textureImage == nil) {
+        NSLog(@"Failed to load texture image %@",imageName);
+    } else {
+        
+        tex->width = CGImageGetWidth(textureImage);
+        tex->height = CGImageGetHeight(textureImage);
+        
+        GLubyte *textureData = (GLubyte *)calloc(tex->width * tex->height, 4);
+        
+        CGContextRef textureContext = CGBitmapContextCreate(textureData, tex->width, tex->height, 8, tex->width * 4, CGImageGetColorSpace(textureImage), kCGImageAlphaPremultipliedLast);
+        CGContextSetBlendMode(textureContext, kCGBlendModeCopy);
+        CGContextDrawImage(textureContext, CGRectMake(0.0, 0.0, (float)tex->width, (float)tex->height), textureImage);
+        
+        CGContextRelease(textureContext);
+        
+        glGenTextures(1, &tex->texture);
+        glBindTexture(GL_TEXTURE_2D, tex->texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+        
+        free(textureData);
+        
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glEnable(GL_TEXTURE_2D);
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+    }
+    spritesheet sheet;
+    memcpy(&sheet, tex, sizeof(spritesheet));
+    free(tex);
+    return sheet;
 }
 
 @end

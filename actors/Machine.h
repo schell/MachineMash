@@ -21,7 +21,7 @@ typedef enum {
 
 @interface Machine : NSObject {
     b2Body* _cpu;
-    NSMutableSet* _controls;
+    NSMutableArray* _controls;
     std::vector<b2Body*> _bodies;
     std::vector<b2Joint*> _joints;
 }

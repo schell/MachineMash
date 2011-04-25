@@ -49,7 +49,13 @@
     [(EAGLView *)self.view setFramebuffer];
     
     if ([context API] == kEAGLRenderingAPIOpenGLES2) {
-        [[Renderer sharedRenderer] loadShaders];
+        if (![[Renderer sharedRenderer] loadShaders]) {
+            NSLog(@"%s could not load shaders...",__FUNCTION__);
+        }
+    }
+    
+    if (![[Renderer sharedRenderer] loadTextures]) {
+        NSLog(@"%s could not load textures...",__FUNCTION__);
     }
     
     animating = FALSE;
@@ -116,7 +122,7 @@
 #if TARGET_IPHONE_SIMULATOR
     return YES;
 #endif
-    return toInterfaceOrientation == UIInterfaceOrientationLandscapeLeft;
+    return UIInterfaceOrientationIsLandscape(toInterfaceOrientation);
 }
 
 - (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {

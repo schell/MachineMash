@@ -57,12 +57,14 @@
     rjd.maxMotorTorque = 100.0;
     rjd.motorSpeed = -40.0;
     rjd.Initialize(body, lw, lw->GetPosition());
-    world->CreateJoint(&rjd);
+    b2Joint* joint = world->CreateJoint(&rjd);
     
     rjd.Initialize(body, rw, rw->GetPosition());
     world->CreateJoint(&rjd);
     
-    _controls = [[NSMutableSet set] retain];
+    _joints.push_back(joint);
+    
+    _controls = [[NSMutableArray array] retain];
     
     return self;
 }

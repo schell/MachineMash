@@ -13,6 +13,7 @@
 typedef enum {
     GLProgramAttributePosition,
     GLProgramAttributeColor,
+    GLProgramAttributeTexCoord,
     GLProgramAttributeCount
 } GLProgramAttribute;
 
