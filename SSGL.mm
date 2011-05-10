@@ -138,8 +138,8 @@ void animationTick(animation* anime, clock_t dt) {
 #pragma mark -
 #pragma mark Geometry Mapping
 
-geomap_ geomapMakeBlank(size_t size) {
-	geomap_ map;
+geomap geomapMakeBlank(size_t size) {
+	geomap map;
 	map.numfloats = size;
 	map.vertices = (float*)malloc(size*sizeof(float));
 	map.uvs = (float*)malloc(size*sizeof(float));
@@ -148,7 +148,7 @@ geomap_ geomapMakeBlank(size_t size) {
 	return map;
 }
 
-geomap_ geomapMakeFromSeqWithFrame(spriteseq sequence, unsigned int frame) {
+geomap geomapMakeFromSeqWithFrame(spriteseq sequence, unsigned int frame) {
 	// the extants of one frame
 	float hw = ((float)sequence.framewidth)/2.0;
 	float hh = ((float)sequence.frameheight)/2.0;
@@ -166,7 +166,7 @@ geomap_ geomapMakeFromSeqWithFrame(spriteseq sequence, unsigned int frame) {
 	float uly = ph*(float)(y+sequence.offsety);
 	
 	size_t size = 8 * sizeof(float);
-	geomap_ map;
+	geomap map;
 	map.numfloats = 8;
 	map.vertices = (float*)malloc(size);
 	map.uvs = (float*)malloc(size);
@@ -191,21 +191,21 @@ geomap_ geomapMakeFromSeqWithFrame(spriteseq sequence, unsigned int frame) {
 	return map;
 }
 
-geomap_ geomapMakeFromSeqWithChar(spriteseq sequence, char c) {
+geomap geomapMakeFromSeqWithChar(spriteseq sequence, char c) {
 	if (c < ASCII_START || c > ASCII_END) {
 		return geomapMakeBlank(0);
 	}
 	unsigned int frame = c - ASCII_START;
-	geomap_ map = geomapMakeFromSeqWithFrame(sequence, frame);
+	geomap map = geomapMakeFromSeqWithFrame(sequence, frame);
 	return map;
 }
 
-geomap_ geomapMakeFromSeqWithString(spriteseq sequence, const char* string, float kerning) {
+geomap geomapMakeFromSeqWithString(spriteseq sequence, const char* string, float kerning) {
 	char c = ' ';
 	int i = 0;
 	float x = 0;
 	float y = 0;
-	geomap_ map = geomapMakeBlank(0);
+	geomap map = geomapMakeBlank(0);
 	while ((c = string[i++]) != '\0') {
 		x += sequence.framewidth - kerning;
 		if (c == '\t' || c == ' ') {
@@ -216,7 +216,7 @@ geomap_ geomapMakeFromSeqWithString(spriteseq sequence, const char* string, floa
 			y -= sequence.frameheight;
 			continue;
 		}
-		geomap_ charmap = geomapMakeFromSeqWithChar(sequence, c);
+		geomap charmap = geomapMakeFromSeqWithChar(sequence, c);
 		geomapTranslate2D(&charmap, x, y);
 		geomapConcatenateIntoMap(&map, &charmap);
 		destroy(&charmap);
@@ -224,7 +224,7 @@ geomap_ geomapMakeFromSeqWithString(spriteseq sequence, const char* string, floa
 	return map;
 }
 
-geomap_ geomapMakeFromAnimation(animation anime) {
+geomap geomapMakeFromAnimation(animation anime) {
 	frame* frameAtNdx = &anime.currentFrame;
 	rectangle bounds = frameAtNdx->bounds;
 	float l = bounds.left;
@@ -244,7 +244,7 @@ geomap_ geomapMakeFromAnimation(animation anime) {
 	float boh = b/h;
 	
 	size_t size = 8 * sizeof(float);
-	geomap_ map;
+	geomap map;
 	map.numfloats = 8;
 	map.vertices = (float*)malloc(size);
 	map.uvs = (float*)malloc(size);
@@ -270,14 +270,14 @@ geomap_ geomapMakeFromAnimation(animation anime) {
 	
 }
 
-void geomapTranslate2D(geomap_* map, float x, float y) {
+void geomapTranslate2D(geomap* map, float x, float y) {
 	for (int i = 0; i<map->numfloats; i+=2) {
 		map->vertices[i] = map->vertices[i] + x;
 		map->vertices[i+1] = map->vertices[i+1] + y;
 	}
 }
 
-void geomapConcatenateIntoMap(geomap_* into, geomap_* from) {
+void geomapConcatenateIntoMap(geomap* into, geomap* from) {
 	int prevfloats = into->numfloats;
 	int totalfloats = into->numfloats + from->numfloats + 4;
 	into->vertices = (float*)realloc(into->vertices, totalfloats*sizeof(float));
@@ -297,7 +297,7 @@ void geomapConcatenateIntoMap(geomap_* into, geomap_* from) {
 	into->numfloats = totalfloats;
 }
 
-void geomapDestroy(geomap_* map) {
+void geomapDestroy(geomap* map) {
 	free(map->vertices);
 	free(map->uvs);
 	map->numfloats = 0;
@@ -306,6 +306,6 @@ void geomapDestroy(geomap_* map) {
 #pragma mark -
 #pragma mark Convenient Destruction
 
-void destroy(geomap_* map) {
+void destroy(geomap* map) {
 	geomapDestroy(map);
 }

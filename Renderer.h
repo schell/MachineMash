@@ -15,8 +15,8 @@
 #import "GLMath.h"
 #import "SSGL.h"
 
-#pragma -
-#pragma Renderer
+#pragma mark -
+#pragma mark Renderer
 
 @interface Renderer : NSObject {
     BOOL GLisInitialized;
@@ -30,12 +30,11 @@
 + (Renderer*)sharedRenderer;
 + (Renderer*)ES1Renderer;
 + (Renderer*)ES2Renderer;
-- (void)setFlags;
 - (BOOL)loadTextures;
 - (BOOL)loadShaders;
 - (void)setScreenWidth:(float)width andHeight:(float)height;
 - (void)render:(b2World*)world;
-- (void)drawTexturedGeomap:(geomap_*)geom;
+- (void)drawTexturedGeomap:(geomap*)geom;
 - (void)drawUserInterface;
 - (float)screenWidth;
 - (float)screenHeight;

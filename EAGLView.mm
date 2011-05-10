@@ -7,7 +7,7 @@
 //
 
 #import <QuartzCore/QuartzCore.h>
-
+#include "ErrorHandler.h"
 #import "EAGLView.h"
 
 @interface EAGLView (PrivateMethods)
@@ -59,6 +59,7 @@
         context = [newContext retain];
         
         [EAGLContext setCurrentContext:nil];
+        ErrorHandler::checkErr("EAGLView::setContext");
     }
 }
 
@@ -66,7 +67,7 @@
 {
     if (context && !defaultFramebuffer) {
         [EAGLContext setCurrentContext:context];
-        
+        ErrorHandler::checkErr("EAGLView::createFrameBuffer-setting context");
         // Create default framebuffer object.
         glGenFramebuffers(1, &defaultFramebuffer);
         glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebuffer);
@@ -80,8 +81,10 @@
         
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, colorRenderbuffer);
         
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             NSLog(@"Failed to make complete framebuffer object %x", glCheckFramebufferStatus(GL_FRAMEBUFFER));
+        }
+        ErrorHandler::checkErr("EAGLView::createFrameBuffer-creating render buffers");
     }
 }
 

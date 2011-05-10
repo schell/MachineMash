@@ -56,7 +56,6 @@ static MachineMashModel* sharedModel = nil;
             [NSException raise:@"could not set GLES API" format:@"%i is not a GLES version"];
             break;
     }
-    world->SetDebugDraw([Renderer sharedRenderer].internalRenderer);
 }
 
 #pragma -
@@ -93,6 +92,20 @@ static MachineMashModel* sharedModel = nil;
 	for (b2Body* b = world->GetBodyList(); b; b = b->GetNext()) {
         
 	}
+    //iterate over the joints and apply damage
+    for (b2Joint* j = world->GetJointList(); j; j = j->GetNext()) {
+        float force = j->GetReactionForce(1.0).Length();
+        UserJoint* uj = (UserJoint*)j->GetUserData();
+        
+        if (uj && force > uj->threshold) {
+            float damage = force - uj->threshold;
+            uj->hp -= damage;
+            NSLog(@"%s takes %f damage",uj->tag.c_str(),damage);
+            if (uj->hp <= 0.0) {
+                NSLog(@"%s is destroyed",uj->tag.c_str());
+            }
+        }
+    }
 }
 
 - (void)step {

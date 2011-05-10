@@ -33,15 +33,17 @@
 #pragma Setup
 
 - (void)setup {
+    float bottom = -10.0;
+    float wide = 15.0;
     player = [self createPlayer];
     b2BodyDef bd;
     b2Body* ground = world->CreateBody(&bd);
     b2PolygonShape edge;
-    edge.SetAsEdge(b2Vec2(-10.0, 0.0), b2Vec2(10.0, 0.0));
+    edge.SetAsEdge(b2Vec2(-wide, bottom), b2Vec2(wide, bottom));
     ground->CreateFixture(&edge, 0.0);
-    edge.SetAsEdge(b2Vec2(10.0, 0.0), b2Vec2(10.0, 1.0));
+    edge.SetAsEdge(b2Vec2(wide, bottom), b2Vec2(wide+0.2, bottom+1.0));
     ground->CreateFixture(&edge, 0.0);
-    edge.SetAsEdge(b2Vec2(-10.0, 0.0), b2Vec2(-10.0, 1.0));
+    edge.SetAsEdge(b2Vec2(-wide, bottom), b2Vec2(-wide, bottom+1.0));
     ground->CreateFixture(&edge, 0.0);
 }
 

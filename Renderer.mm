@@ -8,28 +8,39 @@
 
 #import <math.h>
 #import <cstdlib>
+#include <vector>
 #import "Renderer.h"
 #import "MachineMashModel.h"
-#import "PVRTexture.h"
+#include "VertexBufferObject.h"
+#include "Geometry.h"
+#include "Color.h"
+#include "ErrorHandler.h"
 
 #define ZOOM_MIN 2.0
 #define ZOOM_MAX 60.0
 
-#pragma -
-#pragma RENDERER
+@interface Renderer (PrivateMethods)
+- (void)drawDebugData;
+@end
+
+#pragma mark -
+#pragma mark RENDERER
 
 @implementation Renderer
 @synthesize internalRenderer, api, program;
 
-#pragma -
-#pragma Lifecycle
+VertexBufferObject rainbowSquare("rainbowSquare");
+
+#pragma mark -
+#pragma mark Lifecycle
 
 - (id)init {
     self = [super init];
     GLisInitialized = NO;
     zoomScale = ZOOM_MIN + (ZOOM_MAX - ZOOM_MIN)/2;
     mat4LoadIdentity(&preMatrix);
-    mat4LoadIdentity(&postMatrix);
+    mat4LoadIdentity(&postMatrix);    
+    
     return self;
 }
 
@@ -40,8 +51,8 @@
 }
 
 
-#pragma -
-#pragma Class Methods
+#pragma mark -
+#pragma mark Class Methods
 
 Renderer* __sharedRenderer = nil;
 + (void)use:(Renderer*)renderer {
@@ -65,7 +76,6 @@ Renderer* __es2Renderer = nil;
     if (__es1Renderer == nil) {
         __es1Renderer = [[Renderer alloc] init];
         __es1Renderer.internalRenderer = new GLES1DebugDraw();
-        [__es1Renderer setFlags];
         __es1Renderer.api = 1;
     }
     return __es1Renderer;
@@ -79,30 +89,18 @@ Renderer* __es2Renderer = nil;
     if (__es2Renderer == nil) {
         __es2Renderer = [[Renderer alloc] init];
         __es2Renderer.internalRenderer = new GLES2DebugDraw();
-        [__es2Renderer setFlags];
         __es2Renderer.api = 2;
     }
     return __es2Renderer;
 }
 
-#pragma -
-#pragma Setup
+#pragma mark -
+#pragma mark Setup
 
-- (void)setFlags {
-    uint32 flags = 0;
-    flags += b2DebugDraw::e_shapeBit;
-    //		flags += b2DebugDraw::e_jointBit;
-    //		flags += b2DebugDraw::e_aabbBit;
-    //		flags += b2DebugDraw::e_pairBit;
-    //		flags += b2DebugDraw::e_centerOfMassBit;
-    self.internalRenderer->SetFlags(flags);
-}
-
-static PVRTexture* bmtex = nil;
 - (BOOL)loadTextures {
     numberOfTextures = 1;
-    NSString* path = [[NSBundle mainBundle] pathForResource:@"text" ofType:@"pvr"];
-	bmtex = [[PVRTexture pvrTextureWithContentsOfFile:path] retain];
+    sheets = (spritesheet*)calloc(sizeof(spritesheet), 1);
+    sheets[0] = [self loadTexture:@"text.png"];
     return YES;
 }
 
@@ -112,20 +110,11 @@ static PVRTexture* bmtex = nil;
     }
    
     // main shader
-    NSString* vShaderPathname;// = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"];
-    NSString* fShaderPathname;// = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"];
-	NSArray* pUniforms;// = [NSArray arrayWithObjects:@"projection",@"modelview",@"color",nil];
-    GLProgram* tempProg;// = [[GLProgram alloc] initWithVertexShader:vShaderPathname 
-//                                                andFragmentShader:fShaderPathname 
-//                                                      andUniforms:pUniforms
-//                                                     andBindBlock:^(GLuint name) {
-//                                                         glBindAttribLocation(name, GLProgramAttributePosition, "position");
-//                                                     }];
-//    if (tempProg == nil) {
-//        return NO;
-//    }
-//    [GLProgram storeProgram:tempProg withIdentifier:@"main"];
-    
+    NSString* vShaderPathname;
+    NSString* fShaderPathname;
+	NSArray* pUniforms;
+    GLProgram* tempProg;
+
     // color varying shader
     vShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"vsh"];
     fShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"fsh"];
@@ -145,7 +134,7 @@ static PVRTexture* bmtex = nil;
     // texture shader
     vShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"vsh"];
     fShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"fsh"];
-	pUniforms = [NSArray arrayWithObjects:@"projection",@"modelview",@"sampler",@"color",nil];
+	pUniforms = [NSArray arrayWithObjects:@"projection",@"modelview",@"sampler",@"color",@"colored",nil];
     tempProg = tempProg = [[GLProgram alloc] initWithVertexShader:vShaderPathname 
                                                 andFragmentShader:fShaderPathname 
                                                       andUniforms:pUniforms
@@ -158,7 +147,6 @@ static PVRTexture* bmtex = nil;
     }
     [GLProgram storeProgram:tempProg withIdentifier:@"tex"];
     
-    // 
     program = [GLProgram getProgramByIdentifier:@"main"];
     ((GLES2DebugDraw*)internalRenderer)->program = [program name];
     return TRUE;
@@ -177,8 +165,8 @@ static PVRTexture* bmtex = nil;
     return internalRenderer->screenHeight;
 }
 
-#pragma -
-#pragma Access
+#pragma mark -
+#pragma mark Access
 
 - (mat4*)preMultiplyMatrix {
     return &preMatrix;
@@ -196,8 +184,8 @@ static PVRTexture* bmtex = nil;
     return zoomScale;
 }
 
-#pragma -
-#pragma Rendering
+#pragma mark -
+#pragma mark Rendering
 
 - (void)render:(b2World*)world {
     // clamp zoomScale
@@ -208,8 +196,9 @@ static PVRTexture* bmtex = nil;
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
     
-    glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+    glClearColor(0.2, 0.2, 0.2, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
+    
     switch (api) {
         case 1: {
             glMatrixMode(GL_PROJECTION);
@@ -219,9 +208,6 @@ static PVRTexture* bmtex = nil;
             break;
         }
         case 2: {
-            glClearColor(0.0, 0.0, 0.0, 0.0);
-            glClear(GL_COLOR_BUFFER_BIT);
-            
             float halfwidth = [self screenWidth]/2.0;
             float halfheight = [self screenHeight]/2.0;
             
@@ -233,28 +219,19 @@ static PVRTexture* bmtex = nil;
             mat4Scale(&modelview, zoomScale, zoomScale, 1.0);
             mat4Multiply(&modelview, &postMatrix);
             
-            [program use];
-            glUniformMatrix4fv([program uniformLocationFor:@"projection"], 1, GL_FALSE, &projection[0]);
-            glUniformMatrix4fv([program uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview[0]);
+            GLProgram* cvProg = [GLProgram getProgramByIdentifier:@"main"];
+            [cvProg use];
+            glUniformMatrix4fv([cvProg uniformLocationFor:@"projection"], 1, GL_FALSE, &projection[0]);
+            glUniformMatrix4fv([cvProg uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview[0]);
             
-            const GLfloat r = 370.0;
             
-            vertexbuffer circle = verticesForCircleWithCountAddOrigin(b2Vec2(0.0, 0.0), r, 32, true);
-            vertexbuffer colors = colorBufferForColor(b2Color(0.0, 0.0, 0.0), 0.0, circle.count);
-            colors.vertices[0] = 0.0/255.0;
-            colors.vertices[1] = 167.0/255.0;
-            colors.vertices[2] = 255.0/255.0;
-            colors.vertices[3] = 1.0;
-            enableAttribArrays(circle, colors);
-            glDrawArrays(GL_TRIANGLE_FAN, 0, circle.count);
-            cleanUpBuffers(circle, colors);
             break;
         }
         default:
             break;
     }
     
-    world->DrawDebugData();
+    [self drawDebugData];
     //internalRenderer->DrawOrigin();
     // clear our multiply matrix
     mat4LoadIdentity(&preMatrix);
@@ -263,7 +240,40 @@ static PVRTexture* bmtex = nil;
     [self drawUserInterface];
 }
 
-- (void)drawTexturedGeomap:(geomap_ *)geom {
+- (void)drawDebugData {
+    b2World* world = [[MachineMashModel sharedModel] world];
+	for (b2Body* b = world->GetBodyList(); b; b = b->GetNext()) {
+        const b2Transform& xf = b->GetTransform();
+        for (b2Fixture* f = b->GetFixtureList(); f; f = f->GetNext()) {
+            if (b->IsActive() == false)
+            {
+                internalRenderer->DrawShape(f, xf, b2Color(0.5f, 0.5f, 0.3f));
+            }
+            else if (b->GetType() == b2_staticBody)
+            {
+                internalRenderer->DrawShape(f, xf, b2Color(0.5f, 0.9f, 0.5f));
+            }
+            else if (b->GetType() == b2_kinematicBody)
+            {
+                internalRenderer->DrawShape(f, xf, b2Color(0.5f, 0.5f, 0.9f));
+            }
+            else if (b->IsAwake() == false)
+            {
+                internalRenderer->DrawShape(f, xf, b2Color(0.6f, 0.6f, 0.6f));
+            }
+            else
+            {
+                internalRenderer->DrawShape(f, xf, b2Color(0.9f, 0.7f, 0.7f));
+            }
+        }
+    }
+    
+	for (b2Joint* j = world->GetJointList(); j; j = j->GetNext()) {
+        internalRenderer->DrawJoint(j);
+    }
+}
+
+- (void)drawTexturedGeomap:(geomap *)geom {
 	glUniform1f([[GLProgram getProgramByIdentifier:@"tex"] uniformLocationFor:@"sampler"], 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -277,36 +287,10 @@ static PVRTexture* bmtex = nil;
 }
 
 - (void)drawUserInterface {
-    GLProgram* texP = [GLProgram getProgramByIdentifier:@"tex"];
-    [texP use];
-    
-    float halfwidth = [self screenWidth]/2.0;
-    float halfheight = [self screenHeight]/2.0;
-    
-    mat4 projection;
-    mat4LoadOrtho(&projection,-halfwidth, halfwidth, halfheight, -halfheight, -1.0, 1.0);
-    mat4 modelview;
-    mat4LoadIdentity(&modelview);
-	glUniformMatrix4fv([texP uniformLocationFor:@"projection"], 1, GL_FALSE, &projection[0]);
-	glUniformMatrix4fv([texP uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview[0]);
-    
-    spritesheet textsheet = spritesheetMake([bmtex name], [bmtex width], [bmtex height]);
-    spriteseq textseq = spriteseqMake(textsheet, 8, 8, 0, 3);
-    geomap_ textmap = geomapMakeFromSeqWithString(textseq, "MachineMash", 0);
-    
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textsheet.texture);
-    
-	rbga black = {0.0,0.0,0.0,1.0};
-	glUniform4fv([texP uniformLocationFor:@"color"], 1, black);
-    
-    [self drawTexturedGeomap:&textmap];
-    
-    destroy(&textmap);
 }
 
-#pragma -
-#pragma Texture
+#pragma mark -
+#pragma mark Texture
 
 - (spritesheet)loadTexture:(NSString*)imageName {
     [[GLProgram getProgramByIdentifier:@"tex"] use];
@@ -317,7 +301,6 @@ static PVRTexture* bmtex = nil;
     if (textureImage == nil) {
         NSLog(@"Failed to load texture image %@",imageName);
     } else {
-        
         tex->width = CGImageGetWidth(textureImage);
         tex->height = CGImageGetHeight(textureImage);
         

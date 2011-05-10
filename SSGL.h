@@ -6,6 +6,16 @@
 //  Copyright 2011 __MyCompanyName__. All rights reserved.
 //
 
+#ifndef __SSGL__
+#define __SSGL__
+
+#include <OpenGLES/EAGL.h>
+#include <OpenGLES/ES1/gl.h>
+#include <OpenGLES/ES1/glext.h>
+#include <OpenGLES/ES2/gl.h>
+#include <OpenGLES/ES2/glext.h>
+#include <map>
+#include <string>
 #include "GLMath.h"
 
 #define ASCII_START 0x21
@@ -80,18 +90,20 @@ typedef struct geomap {
 	float* vertices;		
 	float* uvs;
 	unsigned int numfloats;
-} geomap_;
+} geomap;
 
-geomap_ geomapMakeBlank(size_t size);
-geomap_ geomapMakeFromSeqWithFrame(spriteseq sequence, unsigned int frame);
-geomap_ geomapMakeFromSeqWithChar(spriteseq sequence, char c);
-geomap_ geomapMakeFromSeqWithString(spriteseq sequence, const char* string, float kerning);
-geomap_ geomapMakeFromAnimation(animation sequence);
-void geomapTranslate2D(geomap_* map, float x, float y);
-void geomapConcatenateIntoMap(geomap_* into, geomap_* from); 
-void geomapDestroy(geomap_* map);
+geomap geomapMakeBlank(size_t size);
+geomap geomapMakeFromSeqWithFrame(spriteseq sequence, unsigned int frame);
+geomap geomapMakeFromSeqWithChar(spriteseq sequence, char c);
+geomap geomapMakeFromSeqWithString(spriteseq sequence, const char* string, float kerning);
+geomap geomapMakeFromAnimation(animation sequence);
+void geomapTranslate2D(geomap* map, float x, float y);
+void geomapConcatenateIntoMap(geomap* into, geomap* from); 
+void geomapDestroy(geomap* map);
 
 #pragma mark -
 #pragma mark Convenient Destruction For All!
 
-void destroy(geomap_* map);
+void destroy(geomap* map);
+
+#endif

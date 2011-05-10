@@ -58,11 +58,15 @@
     rjd.motorSpeed = -40.0;
     rjd.Initialize(body, lw, lw->GetPosition());
     b2Joint* joint = world->CreateJoint(&rjd);
+    UserJoint* uJoint = new UserJoint();
+    joint->SetUserData(uJoint);
+    _joints.push_back(uJoint);
     
     rjd.Initialize(body, rw, rw->GetPosition());
-    world->CreateJoint(&rjd);
-    
-    _joints.push_back(joint);
+    joint = world->CreateJoint(&rjd);
+    uJoint = new UserJoint();
+    joint->SetUserData(uJoint);
+    _joints.push_back(uJoint);
     
     _controls = [[NSMutableArray array] retain];
     
@@ -98,5 +102,9 @@
     }
     return 0.0f;
 }
+
+#pragma -
+#pragma Factory Functions
+
 
 @end

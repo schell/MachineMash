@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 #import <Box2D/Box2D.h>
 #include <vector>
+#include "UserJoint.h"
 
 #define HP_SHOW_TIME 2.0
 
@@ -23,7 +24,7 @@ typedef enum {
     b2Body* _cpu;
     NSMutableArray* _controls;
     std::vector<b2Body*> _bodies;
-    std::vector<b2Joint*> _joints;
+    std::vector<UserJoint*> _joints;
 }
 - (id)initWithWorld:(b2World*)world;
 - (b2Body*)cpu;
