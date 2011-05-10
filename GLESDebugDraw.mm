@@ -3,7 +3,7 @@
 //  MachineMash
 //
 //  Created by Schell Scivally on 4/3/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 ModMash. All rights reserved.
 //
 
 #include "GLESDebugDraw.h"
@@ -85,7 +85,7 @@ void GLESDebugDraw::DrawJoint(b2Joint* joint) {
 	b2Vec2 p1 = joint->GetAnchorA();
 	b2Vec2 p2 = joint->GetAnchorB();
     
-	b2Color color(0.5f, 0.8f, 0.8f);
+	b2Color color(1.0, 0.0, 1.0);
     
 	switch (joint->GetType()) {
         case e_distanceJoint:
@@ -164,33 +164,27 @@ void GLES2DebugDraw::DrawCircle(const b2Vec2& center, float32 radius, const b2Co
 
 void GLES2DebugDraw::DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color) {
     Color c(color.r, color.g, color.b, 0.5);
-    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->program);
-    c.a = 1.0;
     drawCircleES2(center, radius, c, GL_TRIANGLE_FAN, this->program);
+    c.a = 1.0;
+    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->program);
+    this->DrawSegment(center, b2Vec2(center.x+radius*axis.x, center.y+radius*axis.y), color);
 }
 
 void GLES2DebugDraw::DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color) {
-    glUseProgram(this->program);
-//    glUniform4f(glGetUniformLocation(this->program, "color"), color.r, color.g, color.b, 1.0f);
-    
-//	GLfloat	glVertices[] = {
-//		p1.x,p1.y,p2.x,p2.y
-//	};
-    
-//    vertexbuffer colors = colorBufferForColor(color, 1.0, 2);
-//    
-//    glVertexAttribPointer(GLProgramAttributePosition, 2, GL_FLOAT, 0, 0, glVertices);
-//	glEnableVertexAttribArray(GLProgramAttributePosition);
-//    glVertexAttribPointer(GLProgramAttributeColor, 4, GL_FLOAT, 0, 0, colors.data);
-//    glEnableVertexAttribArray(GLProgramAttributeColor);
-//    
-//	glDrawArrays(GL_LINES, 0, 2);
-//    
-//    free(colors.data);
+    VertexBufferObject vbo("segment");
+    vbo.drawMode = GL_LINES;
+    vbo.shaderProgramName = this->program;
+    float vertData[] = {p1.x,p1.y,p2.x,p2.y};
+    std::vector<float> verts(vertData, vertData+4);
+    vbo.addAttributeData(&verts, 2, GLProgramAttributePosition);
+    Color c(color.r, color.g, color.b, 1.0);
+    std::vector<float> colorBuffer = Color::colorBuffer(&c, vbo.vertexCount());
+    vbo.addAttributeData(&colorBuffer, 4, GLProgramAttributeColor);
+    vbo.draw();
+    vbo.unload();
 }
 
-void GLES2DebugDraw::DrawTransform(const b2Transform& xf)
-{
+void GLES2DebugDraw::DrawTransform(const b2Transform& xf) {
 	b2Vec2 p1 = xf.position, p2;
 	const float32 k_axisScale = 0.4f;
     
@@ -201,13 +195,10 @@ void GLES2DebugDraw::DrawTransform(const b2Transform& xf)
 	DrawSegment(p1,p2,b2Color(0,1,0));
 }
 
-void GLES2DebugDraw::DrawPoint(const b2Vec2& p, float32 size, const b2Color& color)
-{
+void GLES2DebugDraw::DrawPoint(const b2Vec2& p, float32 size, const b2Color& color) {
 	glColor4f(color.r, color.g, color.b,1);
 	glPointSize(size);
-	GLfloat				glVertices[] = {
-		p.x,p.y
-	};
+	GLfloat	glVertices[] = {p.x,p.y};
 	glVertexPointer(2, GL_FLOAT, 0, glVertices);
 	glDrawArrays(GL_POINTS, 0, 1);
 	glPointSize(1.0f);

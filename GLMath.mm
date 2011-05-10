@@ -3,7 +3,7 @@
 //  MachineMash
 //
 //  Created by Schell Scivally on 4/3/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 ModMash. All rights reserved.
 //
 
 #include "GLMath.h"

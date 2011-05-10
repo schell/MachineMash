@@ -24,7 +24,8 @@ public:
     void store();
     GLuint getId();
     void print();
-    virtual void draw();
+    void prepareBuffers();
+    void draw();
     void unload();
     
     GLuint shaderProgramName;
@@ -36,7 +37,6 @@ private:
     std::vector<size_t> attributeElementCounts;
     std::vector<unsigned int> attributeIndices;
     bool stored;
-    bool unloaded;
     size_t numVertices;
     static std::map<std::string, GLuint> vboMap;
 };

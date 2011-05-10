@@ -3,7 +3,7 @@
 //  MachineMash
 //
 //  Created by Schell Scivally on 5/5/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 ModMash. All rights reserved.
 //
 
 #include "Geometry.h"
@@ -23,8 +23,6 @@ std::vector<float> Geometry::rectangle(float cx, float cy, float width, float he
 
 std::vector<float> Geometry::circle(float cx, float cy, float radius, float points) {
     std::vector<float> circle;
-    circle.push_back(cx);
-    circle.push_back(cy);
     float inc = M_PI/points*2;
     for (float i = 0.0; i <= points; i++) {
         float x = cx + cos(i*inc) * radius;

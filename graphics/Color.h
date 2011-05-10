@@ -3,7 +3,7 @@
 //  MachineMash
 //
 //  Created by Schell Scivally on 5/6/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 ModMash. All rights reserved.
 //
 
 #ifndef __COLOR_CLASS__

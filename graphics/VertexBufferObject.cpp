@@ -3,7 +3,7 @@
 //  MachineMash
 //
 //  Created by Schell Scivally on 5/3/11.
-//  Copyright 2011 __MyCompanyName__. All rights reserved.
+//  Copyright 2011 ModMash. All rights reserved.
 //
 
 #include "VertexBufferObject.h"
@@ -14,7 +14,6 @@ std::map<std::string, unsigned int> VertexBufferObject::vboMap;
 VertexBufferObject::VertexBufferObject(std::string name) {
     this->name = name;
     this->stored = false;
-    this->unloaded = false;
     this->numVertices = 0;
     this->drawMode = GL_TRIANGLE_FAN;
 }
@@ -34,7 +33,7 @@ size_t VertexBufferObject::stride() {
 }
 
 size_t VertexBufferObject::vertexCount() {
-    if (this->unloaded) {
+    if(this->numVertices) {
         return this->numVertices;
     } else if (this->data.size() == 0) {
         return 0;
@@ -83,9 +82,8 @@ void VertexBufferObject::store() {
         ErrorHandler::checkErr("VertexBufferObject::store-glBufferData");
         this->id = vboId;
         this->stored = true;
-        // unload
+        // unload from client space
         this->numVertices = this->vertexCount();
-        this->unloaded = true;
         this->data.clear();
     } else {
         printf("VertexBufferObject::store() vbo has already been stored\n");
@@ -115,7 +113,7 @@ void VertexBufferObject::print() {
     }
 }
 
-void VertexBufferObject::draw() {
+void VertexBufferObject::prepareBuffers() {
     glUseProgram(this->shaderProgramName);
     glBindBuffer(GL_ARRAY_BUFFER, this->getId());
     size_t stride = this->stride();
@@ -126,8 +124,12 @@ void VertexBufferObject::draw() {
         glVertexAttribPointer(this->attributeIndices.at(i), elementCount, GL_FLOAT, GL_FALSE, stride*sizeof(float), (const void*)offset);
         offset += elementCount*sizeof(float);
     }
+    ErrorHandler::checkErr("VertexBufferObject::prepareBuffers()");
+}
+
+void VertexBufferObject::draw() {
+    this->prepareBuffers();
     glDrawArrays(this->drawMode, 0, this->vertexCount());
-    ErrorHandler::checkErr("VertexBufferObject::draw()");
 }
 
 void VertexBufferObject::unload() {
@@ -135,7 +137,6 @@ void VertexBufferObject::unload() {
         glDeleteBuffers(1, &this->id);
     }
     this->stored = false;
-    this->unloaded = false;
     this->numVertices = 0;
     this->drawMode = GL_TRIANGLE_FAN;
     this->data.clear();

@@ -247,15 +247,15 @@ Renderer* __es2Renderer = nil;
         for (b2Fixture* f = b->GetFixtureList(); f; f = f->GetNext()) {
             if (b->IsActive() == false)
             {
-                internalRenderer->DrawShape(f, xf, b2Color(0.5f, 0.5f, 0.3f));
+                internalRenderer->DrawShape(f, xf, b2Color(1.0, 1.0, 0.0f));
             }
             else if (b->GetType() == b2_staticBody)
             {
-                internalRenderer->DrawShape(f, xf, b2Color(0.5f, 0.9f, 0.5f));
+                internalRenderer->DrawShape(f, xf, b2Color(0.0, 1.0, 1.0));
             }
             else if (b->GetType() == b2_kinematicBody)
             {
-                internalRenderer->DrawShape(f, xf, b2Color(0.5f, 0.5f, 0.9f));
+                internalRenderer->DrawShape(f, xf, b2Color(1.0, 0.0, 1.0));
             }
             else if (b->IsAwake() == false)
             {
@@ -263,7 +263,7 @@ Renderer* __es2Renderer = nil;
             }
             else
             {
-                internalRenderer->DrawShape(f, xf, b2Color(0.9f, 0.7f, 0.7f));
+                internalRenderer->DrawShape(f, xf, b2Color(1.0, 1.0, 1.0));
             }
         }
     }
