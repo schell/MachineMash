@@ -10,11 +10,12 @@ attribute vec2 position;
 attribute vec4 color;
 
 uniform mat4 projection;
+uniform mat4 cameraview;
 uniform mat4 modelview;
 
 varying vec4 colorVarying;
 
 void main() {
     colorVarying = color;
-    gl_Position = projection * modelview * vec4(position, 0.0, 1.0);
+    gl_Position = projection * cameraview * modelview * vec4(position, 0.0, 1.0);
 }

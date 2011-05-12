@@ -12,20 +12,19 @@
 #import <OpenGLES/ES2/gl.h>
 #import "GLESDebugDraw.h"
 #import "GLProgram.h"
-#import "GLMath.h"
-#import "SSGL.h"
+#import "Matrix.h"
 
 #pragma mark -
 #pragma mark Renderer
 
 @interface Renderer : NSObject {
     BOOL GLisInitialized;
-    mat4 preMatrix;
-    mat4 postMatrix;
+    Matrix preMatrix;
+    Matrix postMatrix;
     CGFloat zoomScale;
-    spritesheet* sheets;
     unsigned int numberOfTextures;
 }
+
 + (void)use:(Renderer*)shared;
 + (Renderer*)sharedRenderer;
 + (Renderer*)ES1Renderer;
@@ -34,15 +33,14 @@
 - (BOOL)loadShaders;
 - (void)setScreenWidth:(float)width andHeight:(float)height;
 - (void)render:(b2World*)world;
-- (void)drawTexturedGeomap:(geomap*)geom;
 - (void)drawUserInterface;
 - (float)screenWidth;
 - (float)screenHeight;
-- (mat4*)preMultiplyMatrix;
-- (mat4*)postMultiplyMatrix;
+- (Matrix*)preMultiplyMatrix;
+- (Matrix*)postMultiplyMatrix;
 - (void)setZoomScale:(CGFloat)zoom;
 - (CGFloat)zoomScale;
-- (spritesheet)loadTexture:(NSString*)imageName;
+- (void)loadTexture:(NSString*)imageName;
 @property (readwrite,assign) GLESDebugDraw* internalRenderer;
 @property (readwrite,assign) uint api;
 @property (readwrite,retain) GLProgram* program;

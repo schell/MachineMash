@@ -14,6 +14,7 @@
 #include <OpenGLES/ES2/gl.h>
 #include <OpenGLES/ES2/glext.h>
 #include <Box2D/Box2D.h>
+#include "VertexBufferObject.h"
 
 struct b2AABB;
 

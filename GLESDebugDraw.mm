@@ -7,10 +7,9 @@
 //
 
 #include "GLESDebugDraw.h"
-#include "VertexBufferObject.h"
+#include "GLProgram.h"
 #include "Geometry.h"
 #include "Color.h"
-#include "GLProgram.h"
 
 #define PTM_RATIO 32.0f
 
@@ -20,7 +19,8 @@
 #pragma -
 #pragma GLESDEBUGDRAW
 
-GLESDebugDraw::GLESDebugDraw() {}
+GLESDebugDraw::GLESDebugDraw() { 
+}
 GLESDebugDraw::~GLESDebugDraw() {}
 
 void GLESDebugDraw::DrawOrigin() {
@@ -41,10 +41,8 @@ void GLESDebugDraw::DrawOrigin() {
 }
 
 void GLESDebugDraw::DrawShape(b2Fixture* fixture, const b2Transform& xf, const b2Color& color) {
-	switch (fixture->GetType())
-	{
-        case b2Shape::e_circle:
-		{
+	switch (fixture->GetType()) {
+        case b2Shape::e_circle: {
 			b2CircleShape* circle = (b2CircleShape*)fixture->GetShape();
             
 			b2Vec2 center = b2Mul(xf, circle->m_p);
@@ -55,8 +53,7 @@ void GLESDebugDraw::DrawShape(b2Fixture* fixture, const b2Transform& xf, const b
 		}
             break;
             
-        case b2Shape::e_polygon:
-		{
+        case b2Shape::e_polygon: {
 			b2PolygonShape* poly = (b2PolygonShape*)fixture->GetShape();
 			int32 vertexCount = poly->m_vertexCount;
 			b2Assert(vertexCount <= b2_maxPolygonVertices);
@@ -117,18 +114,18 @@ void GLESDebugDraw::DrawJoint(b2Joint* joint) {
 #pragma -
 #pragma GLES2DEBUGDRAW
 
-void drawPolygonES2(const b2Vec2* vertices, int32 vertexCount, Color color, GLenum drawMode, GLuint program) {
-    VertexBufferObject vbo("polygon");
-    vbo.drawMode = drawMode;
-    vbo.shaderProgramName = program;
+void drawPolygonES2(const b2Vec2* vertices, int32 vertexCount, Color color, GLenum glDrawMode, GLuint program) {
+    VertexBufferObject vbo;
+    vbo.glDrawMode = glDrawMode;
+    vbo.glProgram = program;
     std::vector<float> verts;
     for (int i = 0; i<vertexCount; i++) {
         verts.push_back(vertices[i].x); 
         verts.push_back(vertices[i].y);
     }
-    vbo.addAttributeData(&verts, 2, GLProgramAttributePosition);
-    std::vector<float> colorBuffer = Color::colorBuffer(&color, vbo.vertexCount());
-    vbo.addAttributeData(&colorBuffer, 4, GLProgramAttributeColor);
+    vbo.addAttributeData(verts, 2, GLProgramAttributePosition);
+    std::vector<float> colorBuffer = Color::colorBuffer(color, vbo.vertexCount());
+    vbo.addAttributeData(colorBuffer, 4, GLProgramAttributeColor);
     vbo.draw();
     vbo.unload();
 }
@@ -145,14 +142,14 @@ void GLES2DebugDraw::DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount,
     drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP, this->program);
 }
 
-void drawCircleES2(const b2Vec2& center, float32 radius, Color color, GLenum drawMode, GLuint program) {
-    VertexBufferObject vbo("circle");
-    vbo.drawMode = drawMode;
-    vbo.shaderProgramName = program;
+void drawCircleES2(const b2Vec2& center, float32 radius, Color color, GLenum glDrawMode, GLuint program) {
+    VertexBufferObject vbo;
+    vbo.glDrawMode = glDrawMode;
+    vbo.glProgram = program;
     std::vector<float> verts = Geometry::circle(center.x, center.y, radius, 28);
-    vbo.addAttributeData(&verts, 2, GLProgramAttributePosition);
-    std::vector<float> colors = Color::colorBuffer(&color, vbo.vertexCount());
-    vbo.addAttributeData(&colors, 4, GLProgramAttributeColor);
+    vbo.addAttributeData(verts, 2, GLProgramAttributePosition);
+    std::vector<float> colors = Color::colorBuffer(color, vbo.vertexCount());
+    vbo.addAttributeData(colors, 4, GLProgramAttributeColor);
     vbo.draw();
     vbo.unload();
 }
@@ -171,15 +168,15 @@ void GLES2DebugDraw::DrawSolidCircle(const b2Vec2& center, float32 radius, const
 }
 
 void GLES2DebugDraw::DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color) {
-    VertexBufferObject vbo("segment");
-    vbo.drawMode = GL_LINES;
-    vbo.shaderProgramName = this->program;
+    VertexBufferObject vbo;
+    vbo.glDrawMode = GL_LINES;
+    vbo.glProgram = this->program;
     float vertData[] = {p1.x,p1.y,p2.x,p2.y};
     std::vector<float> verts(vertData, vertData+4);
-    vbo.addAttributeData(&verts, 2, GLProgramAttributePosition);
+    vbo.addAttributeData(verts, 2, GLProgramAttributePosition);
     Color c(color.r, color.g, color.b, 1.0);
-    std::vector<float> colorBuffer = Color::colorBuffer(&c, vbo.vertexCount());
-    vbo.addAttributeData(&colorBuffer, 4, GLProgramAttributeColor);
+    std::vector<float> colorBuffer = Color::colorBuffer(c, vbo.vertexCount());
+    vbo.addAttributeData(colorBuffer, 4, GLProgramAttributeColor);
     vbo.draw();
     vbo.unload();
 }

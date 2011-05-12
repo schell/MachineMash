@@ -8,7 +8,6 @@
 
 #import <Foundation/Foundation.h>
 #import <Box2D/Box2D.h>
-#import "GLMath.h"
 #import "Machine.h"
 
 #define PTM_RATIO 32

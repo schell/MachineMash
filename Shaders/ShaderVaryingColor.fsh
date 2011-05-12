@@ -8,6 +8,8 @@
 
 varying lowp vec4 colorVarying;
 
+uniform lowp float alpha;
+
 void main() {
-    gl_FragColor = colorVarying;
+    gl_FragColor = vec4(colorVarying.rgb,colorVarying.a*alpha);
 }

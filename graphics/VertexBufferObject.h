@@ -16,29 +16,47 @@
 
 class VertexBufferObject {
 public:
-    VertexBufferObject(std::string);
+    /**
+     * Constructor
+     */
+    VertexBufferObject();
+    /**
+     * Deconstructor
+     */
     ~VertexBufferObject();
+    /**
+     *	Returns the stride between vertex elements.
+     *
+     *	@return size_t The number of elements in one vertex structure.
+     */
     size_t stride();
     size_t vertexCount();
-    void addAttributeData(std::vector<float>*, unsigned int, unsigned int);
+    void addAttributeData(std::vector<float>, unsigned int, unsigned int);
     void store();
     GLuint getId();
     void print();
+    /**
+     *	Switches to this VBO's shader program.
+     *  Switches if necessary and returns true, if <code>glProgram</code> is
+     *. the current shader program, returns false.
+     *
+     *	@return bool Whether or not the switch was made
+     */
+    bool switchToProgram();
     void prepareBuffers();
     void draw();
     void unload();
     
-    GLuint shaderProgramName;
-    GLenum drawMode;
+    GLuint glProgram;
+    GLenum glDrawMode;
 private:
-    GLuint id;
-    std::string name;
-    std::vector<GLfloat> data;
-    std::vector<size_t> attributeElementCounts;
-    std::vector<unsigned int> attributeIndices;
-    bool stored;
-    size_t numVertices;
-    static std::map<std::string, GLuint> vboMap;
+    GLuint _id;
+    std::vector<GLfloat> _data;
+    std::vector<size_t> _attributeElementCounts;
+    std::vector<unsigned int> _attributeIndices;
+    bool _stored;
+    size_t _numVertices;
+    static GLuint __currentProgram;
 };
 
 #endif

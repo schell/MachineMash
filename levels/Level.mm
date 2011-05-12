@@ -78,13 +78,13 @@
 #pragma Touches
 
 - (void)touchesBegan:(NSSet*)touches inView:(UIView *)view {
-    NSLog(@"%s",__FUNCTION__);
+    //NSLog(@"%s",__FUNCTION__);
 }
 - (void)touchesMoved:(NSSet*)touches inView:(UIView *)view {
-    NSLog(@"%s",__FUNCTION__);
+    //NSLog(@"%s",__FUNCTION__);
 }
 - (void)touchesEnded:(NSSet*)touches inView:(UIView *)view {
-    NSLog(@"%s",__FUNCTION__);
+    //NSLog(@"%s",__FUNCTION__);
 }
 
 @end

@@ -15,8 +15,8 @@ class Color {
 public:
     Color(float r, float g, float b, float a);
     ~Color();
-    static std::vector<float> colorBuffer(Color* color, size_t length);
-    static std::vector<float> colorBuffer(std::vector<Color*>* colors, size_t length);
+    static std::vector<float> colorBuffer(Color color, size_t length);
+    static std::vector<float> colorBuffer(std::vector<Color> colors, size_t length);
     float r,b,g,a;
 };
 

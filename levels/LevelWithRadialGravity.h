@@ -8,9 +8,10 @@
 
 #import <Foundation/Foundation.h>
 #import "Level.h"
+#include "Matrix.h"
 
 @interface LevelWithRadialGravity : Level {
-    mat4 matrix;
+    Matrix matrix;
     b2Body* actor;
     b2Body* planet;
 }

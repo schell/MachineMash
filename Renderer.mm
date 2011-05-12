@@ -15,6 +15,7 @@
 #include "Geometry.h"
 #include "Color.h"
 #include "ErrorHandler.h"
+#include "Sprite.h"
 
 #define ZOOM_MIN 2.0
 #define ZOOM_MAX 60.0
@@ -29,7 +30,7 @@
 @implementation Renderer
 @synthesize internalRenderer, api, program;
 
-VertexBufferObject rainbowSquare("rainbowSquare");
+VertexBufferObject rainbowSquare();
 
 #pragma mark -
 #pragma mark Lifecycle
@@ -37,9 +38,7 @@ VertexBufferObject rainbowSquare("rainbowSquare");
 - (id)init {
     self = [super init];
     GLisInitialized = NO;
-    zoomScale = ZOOM_MIN + (ZOOM_MAX - ZOOM_MIN)/2;
-    mat4LoadIdentity(&preMatrix);
-    mat4LoadIdentity(&postMatrix);    
+    zoomScale = ZOOM_MIN + (ZOOM_MAX - ZOOM_MIN)/2;   
     
     return self;
 }
@@ -99,8 +98,8 @@ Renderer* __es2Renderer = nil;
 
 - (BOOL)loadTextures {
     numberOfTextures = 1;
-    sheets = (spritesheet*)calloc(sizeof(spritesheet), 1);
-    sheets[0] = [self loadTexture:@"text.png"];
+    //    sheets = (spritesheet*)calloc(sizeof(spritesheet), 1);
+    //    sheets[0] = [self loadTexture:@"text.png"];
     return YES;
 }
 
@@ -118,7 +117,7 @@ Renderer* __es2Renderer = nil;
     // color varying shader
     vShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"vsh"];
     fShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"fsh"];
-	pUniforms = [NSArray arrayWithObjects:@"projection",@"modelview",nil];
+	pUniforms = [NSArray arrayWithObjects:@"projection",@"cameraview",@"modelview",@"alpha",nil];
     tempProg = tempProg = [[GLProgram alloc] initWithVertexShader:vShaderPathname 
                                                 andFragmentShader:fShaderPathname 
                                                       andUniforms:pUniforms
@@ -134,7 +133,7 @@ Renderer* __es2Renderer = nil;
     // texture shader
     vShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"vsh"];
     fShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"fsh"];
-	pUniforms = [NSArray arrayWithObjects:@"projection",@"modelview",@"sampler",@"color",@"colored",nil];
+	pUniforms = [NSArray arrayWithObjects:@"projection",@"cameraview",@"modelview",@"sampler",@"color",@"colored",nil];
     tempProg = tempProg = [[GLProgram alloc] initWithVertexShader:vShaderPathname 
                                                 andFragmentShader:fShaderPathname 
                                                       andUniforms:pUniforms
@@ -168,11 +167,11 @@ Renderer* __es2Renderer = nil;
 #pragma mark -
 #pragma mark Access
 
-- (mat4*)preMultiplyMatrix {
+- (Matrix*)preMultiplyMatrix {
     return &preMatrix;
 }
 
-- (mat4*)postMultiplyMatrix {
+- (Matrix*)postMultiplyMatrix {
     return &postMatrix;
 }
 
@@ -186,7 +185,7 @@ Renderer* __es2Renderer = nil;
 
 #pragma mark -
 #pragma mark Rendering
-
+Sprite sprite;
 - (void)render:(b2World*)world {
     // clamp zoomScale
     
@@ -210,32 +209,58 @@ Renderer* __es2Renderer = nil;
         case 2: {
             float halfwidth = [self screenWidth]/2.0;
             float halfheight = [self screenHeight]/2.0;
-            
-            mat4 projection;
-            mat4LoadOrtho(&projection,-halfwidth, halfwidth, halfheight, -halfheight, -1.0, 1.0);
-            mat4 modelview;
-            mat4LoadIdentity(&modelview);
-            mat4Multiply(&modelview, &preMatrix);
-            mat4Scale(&modelview, zoomScale, zoomScale, 1.0);
-            mat4Multiply(&modelview, &postMatrix);
+            Matrix projection;
+            projection.loadOrtho(-halfwidth, halfwidth, halfheight, -halfheight, -1.0, 1.0);
+            Matrix cameraview;
+            cameraview.multiply(preMatrix);
+            cameraview.scale(zoomScale, zoomScale);
+            cameraview.multiply(postMatrix);
+            Matrix modelview;
             
             GLProgram* cvProg = [GLProgram getProgramByIdentifier:@"main"];
             [cvProg use];
-            glUniformMatrix4fv([cvProg uniformLocationFor:@"projection"], 1, GL_FALSE, &projection[0]);
-            glUniformMatrix4fv([cvProg uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview[0]);
+            glUniformMatrix4fv([cvProg uniformLocationFor:@"projection"], 1, GL_FALSE, &projection.elements[0]);
+            glUniformMatrix4fv([cvProg uniformLocationFor:@"cameraview"], 1, GL_FALSE, &cameraview.elements[0]);
+            glUniformMatrix4fv([cvProg uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview.elements[0]);
+            glUniform1f([cvProg uniformLocationFor:@"alpha"], 1.0);
             
-            
+            static bool done = false;
+            if (!done) {
+                done = true;
+                VertexBufferObject redSquare;
+                redSquare.addAttributeData(Geometry::rectangle(0.0, 0.0, 20.0, 20.0), 2, GLProgramAttributePosition);
+                redSquare.addAttributeData(Color::colorBuffer(Color(1.0, 0.0, 0.0, 1.0), redSquare.vertexCount()), 4, GLProgramAttributeColor);
+                redSquare.glProgram = [cvProg name];
+                redSquare.glDrawMode = GL_TRIANGLE_FAN;
+                redSquare.store();
+                sprite.setUniformNames("modelview","alpha");
+                sprite.addVBO(redSquare);
+                sprite.alpha = 0.5;
+            }
+            sprite.matrix.loadIdentity();
+            static float tick = 0.0;
+            sprite.vbos.at(0).glDrawMode = GL_TRIANGLE_FAN;
+            sprite.matrix.translate(Vec2(100.0*sin(tick), 0.0));
+            tick+=M_PI/360.0;
+            sprite.alpha = 0.4;
+            sprite.draw();
+            sprite.alpha = 1.0;
+            sprite.vbos.at(0).glDrawMode = GL_LINE_LOOP;
+            sprite.draw();
+            modelview.loadIdentity();
+            glUniformMatrix4fv([cvProg uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview.elements[0]);
+            glUniform1f([cvProg uniformLocationFor:@"alpha"], 1.0);
             break;
         }
         default:
             break;
     }
     
-    [self drawDebugData];
+    //[self drawDebugData];
     //internalRenderer->DrawOrigin();
     // clear our multiply matrix
-    mat4LoadIdentity(&preMatrix);
-    mat4LoadIdentity(&postMatrix);
+    preMatrix.loadIdentity();
+    postMatrix.loadIdentity();
     
     [self drawUserInterface];
 }
@@ -273,61 +298,48 @@ Renderer* __es2Renderer = nil;
     }
 }
 
-- (void)drawTexturedGeomap:(geomap *)geom {
-	glUniform1f([[GLProgram getProgramByIdentifier:@"tex"] uniformLocationFor:@"sampler"], 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    // Update attribute values
-    glVertexAttribPointer(GLProgramAttributePosition, 2, GL_FLOAT, 0, 0, &geom->vertices[0]);
-    glEnableVertexAttribArray(GLProgramAttributePosition);
-    glVertexAttribPointer(GLProgramAttributeTexCoord, 2, GL_FLOAT, 1, 0, &geom->uvs[0]);
-    glEnableVertexAttribArray(GLProgramAttributeTexCoord);
-    // Draw
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, geom->numfloats/2.0);
-}
-
 - (void)drawUserInterface {
 }
 
 #pragma mark -
 #pragma mark Texture
 
-- (spritesheet)loadTexture:(NSString*)imageName {
-    [[GLProgram getProgramByIdentifier:@"tex"] use];
-    
-    CGImageRef textureImage = [UIImage imageNamed:imageName].CGImage;
-    spritesheet* tex = (spritesheet*)calloc(sizeof(spritesheet), 1);
-    
-    if (textureImage == nil) {
-        NSLog(@"Failed to load texture image %@",imageName);
-    } else {
-        tex->width = CGImageGetWidth(textureImage);
-        tex->height = CGImageGetHeight(textureImage);
-        
-        GLubyte *textureData = (GLubyte *)calloc(tex->width * tex->height, 4);
-        
-        CGContextRef textureContext = CGBitmapContextCreate(textureData, tex->width, tex->height, 8, tex->width * 4, CGImageGetColorSpace(textureImage), kCGImageAlphaPremultipliedLast);
-        CGContextSetBlendMode(textureContext, kCGBlendModeCopy);
-        CGContextDrawImage(textureContext, CGRectMake(0.0, 0.0, (float)tex->width, (float)tex->height), textureImage);
-        
-        CGContextRelease(textureContext);
-        
-        glGenTextures(1, &tex->texture);
-        glBindTexture(GL_TEXTURE_2D, tex->texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-        
-        free(textureData);
-        
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glEnable(GL_TEXTURE_2D);
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-    }
-    spritesheet sheet;
-    memcpy(&sheet, tex, sizeof(spritesheet));
-    free(tex);
-    return sheet;
+- (void)loadTexture:(NSString*)imageName {
+//    [[GLProgram getProgramByIdentifier:@"tex"] use];
+//    
+//    CGImageRef textureImage = [UIImage imageNamed:imageName].CGImage;
+//    spritesheet* tex = (spritesheet*)calloc(sizeof(spritesheet), 1);
+//    
+//    if (textureImage == nil) {
+//        NSLog(@"Failed to load texture image %@",imageName);
+//    } else {
+//        tex->width = CGImageGetWidth(textureImage);
+//        tex->height = CGImageGetHeight(textureImage);
+//        
+//        GLubyte *textureData = (GLubyte *)calloc(tex->width * tex->height, 4);
+//        
+//        CGContextRef textureContext = CGBitmapContextCreate(textureData, tex->width, tex->height, 8, tex->width * 4, CGImageGetColorSpace(textureImage), kCGImageAlphaPremultipliedLast);
+//        CGContextSetBlendMode(textureContext, kCGBlendModeCopy);
+//        CGContextDrawImage(textureContext, CGRectMake(0.0, 0.0, (float)tex->width, (float)tex->height), textureImage);
+//        
+//        CGContextRelease(textureContext);
+//        
+//        glGenTextures(1, &tex->texture);
+//        glBindTexture(GL_TEXTURE_2D, tex->texture);
+//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
+//        
+//        free(textureData);
+//        
+//        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//        glEnable(GL_TEXTURE_2D);
+//        glEnable(GL_BLEND);
+//        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+//    }
+//    spritesheet sheet;
+//    memcpy(&sheet, tex, sizeof(spritesheet));
+//    free(tex);
+//    return sheet;
 }
 
 @end

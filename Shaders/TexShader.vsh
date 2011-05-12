@@ -6,6 +6,7 @@
 //  Copyright 2011 ModMash. All rights reserved.
 //
 uniform mat4 projection;
+uniform mat4 cameraview;
 uniform mat4 modelview;
 
 attribute vec2 position;
@@ -15,6 +16,6 @@ varying vec2 vTexcoord;
 
 void main()
 {
-    gl_Position = projection * modelview * vec4(position, 0.0, 1.0);
+    gl_Position = projection * cameraview * modelview * vec4(position, 0.0, 1.0);
 	vTexcoord = texcoord;
 }

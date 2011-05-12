@@ -93,20 +93,20 @@ b2RevoluteJoint* rm;
     }
     
     // matrix stuff
-    mat4LoadIdentity(&matrix);
+    matrix.loadIdentity();
 }
 
 - (void)step {
     Renderer* renderer = [Renderer sharedRenderer];
     // account for the angle the user is holding the device at
-    mat4Rotate([renderer preMultiplyMatrix], super.accelerationAngle, 0.0, 0.0, 1.0);
+    [renderer preMultiplyMatrix]->rotate(super.accelerationAngle, Vec3(0.0, 0.0, 1.0));
     // move the screen to our actor's position
     CGFloat zoomScale = [renderer zoomScale];
     b2Vec2 p = actor->GetPosition();
-    mat4Translate([renderer preMultiplyMatrix], -p.x*zoomScale, -p.y*zoomScale, 0.0);
+    [renderer preMultiplyMatrix]->translate(Vec3(-p.x*zoomScale, -p.y*zoomScale, 0.0));
     // rotate the screen orthog to the planet surface
     float32 worldAngle = atan2f(p.x, p.y)*180/M_PI;
-    mat4Rotate([renderer preMultiplyMatrix], worldAngle, 0.0, 0.0, 1.0);
+    [renderer preMultiplyMatrix]->rotate(worldAngle, Vec3(0.0, 0.0, 1.0));
     
     // TODO - fix this time-step
 	// http://gafferongames.com/game-physics/fix-your-timestep/
@@ -139,8 +139,7 @@ b2RevoluteJoint* rm;
         CGPoint lastPoint = [touch previousLocationInView:view];
         CGPoint thisPoint = [touch locationInView:view];
         CGPoint diffPoint = CGPointMake(thisPoint.x - lastPoint.x, thisPoint.y - lastPoint.y);
-        mat4Translate(&matrix, -diffPoint.x, diffPoint.y, 0);
-        mat4Print(&matrix);
+        matrix.translate(Vec3(-diffPoint.x, diffPoint.y, 0));
     }
 }
 
