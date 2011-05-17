@@ -14,6 +14,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "Types.h"
 
 /**
  *	A wrapper for OpenGLES2 shader programs.
@@ -24,10 +25,11 @@ class ShaderProgram {
 public:
     ShaderProgram();
     ~ShaderProgram();
-    void setVertexShader(std::string vsh);
-    void setFragmentShader(std::string fsh);
+    bool setVertexShader(std::string vsh);
+    bool setFragmentShader(std::string fsh);
     bool compileShader(GLuint* shader, GLenum type, std::string src);
-    bool link();
+    bool link(bindBlockPtr bindBlock);
+    bool compileProgram(std::string vshFile, std::string fshFile, bindBlockPtr bindBlock);
     GLuint name();
     GLuint uniform(std::string);
     static ShaderProgram* namedInstance(std::string programName);

@@ -5,7 +5,6 @@
 //  Created by Schell Scivally on 4/7/11.
 //  Copyright 2011 ModMash. All rights reserved.
 //
-
 attribute vec2 position;
 attribute vec4 color;
 

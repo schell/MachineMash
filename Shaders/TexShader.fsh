@@ -1,6 +1,6 @@
 //
-//  Shader.fsh
-//  Untitled
+//  TexShader.fsh
+//  MachineMash
 //
 //  Created by Schell Scivally on 2/28/11.
 //  Copyright 2011 ModMash. All rights reserved.

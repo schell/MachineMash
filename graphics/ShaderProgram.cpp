@@ -9,6 +9,7 @@
 #include "ShaderProgram.h"
 #include "Types.h"
 #include "ErrorHandler.h"
+#include "Utilities.h"
 
 std::map<std::string, ShaderProgram> ShaderProgram::__storedPrograms;
 
@@ -18,16 +19,37 @@ ShaderProgram::ShaderProgram() {
 
 ShaderProgram::~ShaderProgram() {}
 
-void ShaderProgram::setVertexShader(std::string vsh) {
-    if (!compileShader(&_vertShader, GL_VERTEX_SHADER, vsh)) {
-        printf("ShaderProgram::serVertexShader() could not compile shader.\n");
+bool ShaderProgram::compileProgram(std::string vshFile, std::string fshFile, bindBlockPtr bindBlock) {
+    std::string vsrc = Utilities::getFileAsString(vshFile);
+    std::string fsrc = Utilities::getFileAsString(fshFile);
+    if (vsrc == "") {
+        printf("ShaderProgram::compileProgram() could not find vertex shader source\n");
+        return false;
     }
+    if (fsrc == "") {
+        printf("ShaderProgram::compileProgram() could not find fragment shader source\n");
+        return false;
+    }
+    if (!this->setVertexShader(vsrc) || !this->setFragmentShader(fsrc) || !this->link(bindBlock)) {
+        return false;
+    }
+    return true;
 }
 
-void ShaderProgram::setFragmentShader(std::string fsh) {
-    if (!compileShader(&_fragShader, GL_FRAGMENT_SHADER, fsh)) {
-        printf("ShaderProgram::setFragmentShader() could not compile shader.\n");
+bool ShaderProgram::setVertexShader(std::string vsh) {
+    if (!this->compileShader(&_vertShader, GL_VERTEX_SHADER, vsh)) {
+        printf("ShaderProgram::serVertexShader() could not compile shader.\n");
+        return false;
     }
+    return true;
+}
+
+bool ShaderProgram::setFragmentShader(std::string fsh) {
+    if (!this->compileShader(&_fragShader, GL_FRAGMENT_SHADER, fsh)) {
+        printf("ShaderProgram::setFragmentShader() could not compile shader.\n");
+        return false;
+    }
+    return true;
 }
 
 bool ShaderProgram::compileShader(GLuint* shader, GLenum type, std::string src) {
@@ -45,10 +67,12 @@ bool ShaderProgram::compileShader(GLuint* shader, GLenum type, std::string src) 
 	
     GLint logLength;
     glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
-    GLchar *log = (GLchar *)malloc(logLength);
-    glGetShaderInfoLog(*shader, logLength, &logLength, log);
-    printf("ShaderProgram::compileShader() shader compile log:\n%s", log);
-    free(log);
+    if (logLength != 0) {
+        GLchar *log = (GLchar *)malloc(logLength);
+        glGetShaderInfoLog(*shader, logLength, &logLength, log);
+        printf("ShaderProgram::compileShader() shader compile log:\n%s", log);
+        free(log);
+    }
 	
     glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
     if (status == 0) {
@@ -59,16 +83,11 @@ bool ShaderProgram::compileShader(GLuint* shader, GLenum type, std::string src) 
     return true;
 }
 
-void bindAtrributes(GLuint program) {
-    glBindAttribLocation(program, ShaderProgramAttributePosition, "position");
-    glBindAttribLocation(program, ShaderProgramAttributeColor, "color");
-    ErrorHandler::checkErr("ProgramShader::bindAttributes()");
-}
-
-bool ShaderProgram::link() {
+bool ShaderProgram::link(bindBlockPtr bindFunc) {
     glAttachShader(this->_name, this->_vertShader);
     glAttachShader(this->_name, this->_fragShader);
-    bindAtrributes(this->_name);
+    bindFunc(this->_name);
+    ErrorHandler::checkErr("ShaderProgram::link()");
     
     GLint logLength,status;
     glLinkProgram(this->_name);

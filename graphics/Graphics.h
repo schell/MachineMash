@@ -10,6 +10,7 @@
 #define __MODMASH_GRAPHICS__
 
 #include "Types.h"
+#include "Utilities.h"
 #include "ShaderProgram.h"
 #include "ErrorHandler.h"
 #include "Vec.h"

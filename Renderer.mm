@@ -33,7 +33,7 @@
     self = [super init];
     GLisInitialized = NO;
     zoomScale = ZOOM_MIN + (ZOOM_MAX - ZOOM_MIN)/2;   
-    
+    Utilities::applicationBundleLocation = std::string([[[NSBundle mainBundle] bundlePath] UTF8String]);
     return self;
 }
 
@@ -96,36 +96,41 @@ Renderer* __es2Renderer = nil;
     return YES;
 }
 
+std::string getFileAsString(std::string file, std::string type) {
+    NSString* nsFile = [NSString stringWithFormat:@"%s",file.c_str()];
+    NSString* nsType = [NSString stringWithFormat:@"%s",type.c_str()];
+    NSString* path = [[NSBundle mainBundle] pathForResource:nsFile ofType:nsType];
+    NSString* source = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+    return std::string([source UTF8String]);
+}
+
+void bindMain(GLuint program) {
+    glBindAttribLocation(program, ShaderProgramAttributePosition, "position");
+    glBindAttribLocation(program, ShaderProgramAttributeColor, "color");
+}
+
+void bindText(GLuint program) {
+    glBindAttribLocation(program, ShaderProgramAttributePosition, "position");
+    glBindAttribLocation(program, ShaderProgramAttributeTexCoord, "texcoord");
+}
+
 - (BOOL)loadShaders {
     if (api == 1) {
         return NO;
     }
-   
+    
     // main shader
-    NSString* vShaderPathname;
-    NSString* fShaderPathname;
-    NSString* vSource;
-    NSString* fSource;
-    std::string vsrc,fsrc;
-
-    // color varying shader
-    vShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"vsh"];
-    vSource = [NSString stringWithContentsOfFile:vShaderPathname encoding:NSUTF8StringEncoding error:nil];
-    fShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"fsh"];
-    fSource = [NSString stringWithContentsOfFile:fShaderPathname encoding:NSUTF8StringEncoding error:nil];
-    
     ShaderProgram* program = ShaderProgram::namedInstance("main");
-    
-    vsrc = std::string([vSource UTF8String]);
-    fsrc = std::string([fSource UTF8String]);
-    
-    program->setVertexShader(vsrc);
-    program->setFragmentShader(fsrc);
-    if (!program->link()) {
+    if(!program->compileProgram("ShaderVaryingColor.vsh", "ShaderVaryingColor.fsh", &bindMain)) {
         return NO;
     }
-    glUseProgram(program->name());
-    ErrorHandler::checkErr("loadShaders");
+    // text shader
+    program = ShaderProgram::namedInstance("text");
+    if (!program->compileProgram("TexShader.vsh", "TexShader.fsh", &bindText)) {
+        return NO;
+    }
+    
+    glUseProgram(ShaderProgram::namedInstance("main")->name());
     return YES;
 }
 

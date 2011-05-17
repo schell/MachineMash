@@ -26,4 +26,6 @@ typedef enum {
     ShaderProgramAttributeCount
 } ShaderProgramAttribute;
 
+typedef void(*bindBlockPtr)(GLuint);
+
 #endif
