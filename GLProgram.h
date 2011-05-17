@@ -10,13 +10,6 @@
 #import <OpenGLES/ES2/gl.h>
 #import <OpenGLES/ES2/glext.h>
 
-typedef enum {
-    GLProgramAttributePosition,
-    GLProgramAttributeColor,
-    GLProgramAttributeTexCoord,
-    GLProgramAttributeCount
-} GLProgramAttribute;
-
 @interface GLProgram : NSObject {
 	NSMutableDictionary* _uniforms;
 	GLuint _name;

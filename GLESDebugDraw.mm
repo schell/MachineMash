@@ -7,9 +7,7 @@
 //
 
 #include "GLESDebugDraw.h"
-#include "GLProgram.h"
-#include "Geometry.h"
-#include "Color.h"
+#include <OpenGLES/ES2/glext.h>
 
 #define PTM_RATIO 32.0f
 
@@ -114,71 +112,74 @@ void GLESDebugDraw::DrawJoint(b2Joint* joint) {
 #pragma -
 #pragma GLES2DEBUGDRAW
 
+GLES2DebugDraw::GLES2DebugDraw() {
+}
+
+ShaderProgram* GLES2DebugDraw::shaderProgram() {
+    return ShaderProgram::namedInstance("main");
+}
+
 void drawPolygonES2(const b2Vec2* vertices, int32 vertexCount, Color color, GLenum glDrawMode, GLuint program) {
-    VertexBufferObject vbo;
-    vbo.glDrawMode = glDrawMode;
-    vbo.glProgram = program;
     std::vector<float> verts;
     for (int i = 0; i<vertexCount; i++) {
         verts.push_back(vertices[i].x); 
         verts.push_back(vertices[i].y);
     }
-    vbo.addAttributeData(verts, 2, GLProgramAttributePosition);
-    std::vector<float> colorBuffer = Color::colorBuffer(color, vbo.vertexCount());
-    vbo.addAttributeData(colorBuffer, 4, GLProgramAttributeColor);
-    vbo.draw();
-    vbo.unload();
+    glEnableVertexAttribArray(ShaderProgramAttributePosition);
+    glVertexAttribPointer(ShaderProgramAttributePosition, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), &verts[0]);
+    glDisableVertexAttribArray(ShaderProgramAttributeColor);
+    glVertexAttrib4f(ShaderProgramAttributeColor, color.r, color.g, color.b, color.a);
+    glDrawArrays(glDrawMode, 0, vertexCount);
 }
 
 void GLES2DebugDraw::DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) {
     Color c(color.r, color.g, color.b, 1.0);
-    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP, this->program);
+    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP, this->shaderProgram()->name());
 }
 
 void GLES2DebugDraw::DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) {
     Color c(color.r, color.g, color.b, 0.5);
-    drawPolygonES2(vertices, vertexCount, c, GL_TRIANGLE_FAN, this->program);
+    drawPolygonES2(vertices, vertexCount, c, GL_TRIANGLE_FAN, this->shaderProgram()->name());
     c.a = 1.0;
-    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP, this->program);
+    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP, this->shaderProgram()->name());
 }
 
 void drawCircleES2(const b2Vec2& center, float32 radius, Color color, GLenum glDrawMode, GLuint program) {
-    VertexBufferObject vbo;
-    vbo.glDrawMode = glDrawMode;
-    vbo.glProgram = program;
-    std::vector<float> verts = Geometry::circle(center.x, center.y, radius, 28);
-    vbo.addAttributeData(verts, 2, GLProgramAttributePosition);
-    std::vector<float> colors = Color::colorBuffer(color, vbo.vertexCount());
-    vbo.addAttributeData(colors, 4, GLProgramAttributeColor);
-    vbo.draw();
-    vbo.unload();
+    GLuint circleVao = ShapeVAOs::sharedInstance()->circle();
+    Matrix modelview;
+    modelview.translate(Vec2(center.x, center.y));
+    modelview.scale(radius, radius, 1.0);
+    glUniformMatrix4fv(glGetUniformLocation(program, "modelview"), 1, GL_FALSE, &modelview.elements[0]);
+    glBindVertexArrayOES(circleVao);
+    glVertexAttrib4f(ShaderProgramAttributeColor, color.r, color.g, color.b, color.a);
+    glDrawArrays(glDrawMode, 0, 361);
+    glBindVertexArrayOES(0);
+    modelview.loadIdentity();
+    glUniformMatrix4fv(glGetUniformLocation(program, "modelview"), 1, GL_FALSE, &modelview.elements[0]);
 }
 
 void GLES2DebugDraw::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color) {
     Color c(color.r, color.g, color.b, 1.0);
-    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->program);
+    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->shaderProgram()->name());
 }
 
 void GLES2DebugDraw::DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color) {
     Color c(color.r, color.g, color.b, 0.5);
-    drawCircleES2(center, radius, c, GL_TRIANGLE_FAN, this->program);
+    drawCircleES2(center, radius, c, GL_TRIANGLE_FAN, this->shaderProgram()->name());
     c.a = 1.0;
-    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->program);
+    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->shaderProgram()->name());
     this->DrawSegment(center, b2Vec2(center.x+radius*axis.x, center.y+radius*axis.y), color);
 }
 
 void GLES2DebugDraw::DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color) {
-    VertexBufferObject vbo;
-    vbo.glDrawMode = GL_LINES;
-    vbo.glProgram = this->program;
     float vertData[] = {p1.x,p1.y,p2.x,p2.y};
-    std::vector<float> verts(vertData, vertData+4);
-    vbo.addAttributeData(verts, 2, GLProgramAttributePosition);
     Color c(color.r, color.g, color.b, 1.0);
-    std::vector<float> colorBuffer = Color::colorBuffer(c, vbo.vertexCount());
-    vbo.addAttributeData(colorBuffer, 4, GLProgramAttributeColor);
-    vbo.draw();
-    vbo.unload();
+    
+    glEnableVertexAttribArray(ShaderProgramAttributePosition);
+    glVertexAttribPointer(ShaderProgramAttributePosition, 2, GL_FLOAT, GL_FALSE, 2*sizeof(float), vertData);
+    glDisableVertexAttribArray(ShaderProgramAttributeColor);
+    glVertexAttrib4f(ShaderProgramAttributeColor, c.r, c.g, c.b, c.a);
+    glDrawArrays(GL_LINES, 0, 2);
 }
 
 void GLES2DebugDraw::DrawTransform(const b2Transform& xf) {

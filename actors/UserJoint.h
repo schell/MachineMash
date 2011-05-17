@@ -6,9 +6,13 @@
 //  Copyright 2011 ModMash. All rights reserved.
 //
 
-#include <string>
+#ifndef __USER_JOINT_CLASS__
+#define __USER_JOINT_CLASS__
 
-class UserJoint {
+#include <string>
+#include "DrawableUserData.h"
+
+class UserJoint : public DrawableUserData {
 public:
     float threshold;
     float hp;
@@ -17,4 +21,7 @@ public:
     UserJoint();
     UserJoint(float threshold, float hp);
     ~UserJoint();
+    void draw(void* parentPtr);
 };
+
+#endif

@@ -14,7 +14,7 @@
 #include <OpenGLES/ES2/gl.h>
 #include <OpenGLES/ES2/glext.h>
 #include <Box2D/Box2D.h>
-#include "VertexBufferObject.h"
+#include "Graphics.h"
 
 struct b2AABB;
 
@@ -57,8 +57,8 @@ public:
 // GLES2 modified by Schell Scivally
 class GLES2DebugDraw : public GLESDebugDraw {
 public:
-    GLuint program;
-    
+    ShaderProgram* shaderProgram();
+    GLES2DebugDraw();
 	void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);
 	void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color);
 	void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color);

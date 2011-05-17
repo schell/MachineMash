@@ -11,26 +11,20 @@
 #include <vector>
 #import "Renderer.h"
 #import "MachineMashModel.h"
-#include "VertexBufferObject.h"
-#include "Geometry.h"
-#include "Color.h"
-#include "ErrorHandler.h"
-#include "Sprite.h"
+#include "DrawableUserData.h"
 
 #define ZOOM_MIN 2.0
 #define ZOOM_MAX 60.0
 
 @interface Renderer (PrivateMethods)
-- (void)drawDebugData;
+- (void)drawScene;
 @end
 
 #pragma mark -
 #pragma mark RENDERER
 
 @implementation Renderer
-@synthesize internalRenderer, api, program;
-
-VertexBufferObject rainbowSquare();
+@synthesize internalRenderer, api;
 
 #pragma mark -
 #pragma mark Lifecycle
@@ -45,7 +39,6 @@ VertexBufferObject rainbowSquare();
 
 - (void)dealloc {
     delete internalRenderer;
-    [program release];
     [super dealloc];
 }
 
@@ -111,44 +104,29 @@ Renderer* __es2Renderer = nil;
     // main shader
     NSString* vShaderPathname;
     NSString* fShaderPathname;
-	NSArray* pUniforms;
-    GLProgram* tempProg;
+    NSString* vSource;
+    NSString* fSource;
+    std::string vsrc,fsrc;
 
     // color varying shader
     vShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"vsh"];
+    vSource = [NSString stringWithContentsOfFile:vShaderPathname encoding:NSUTF8StringEncoding error:nil];
     fShaderPathname = [[NSBundle mainBundle] pathForResource:@"ShaderVaryingColor" ofType:@"fsh"];
-	pUniforms = [NSArray arrayWithObjects:@"projection",@"cameraview",@"modelview",@"alpha",nil];
-    tempProg = tempProg = [[GLProgram alloc] initWithVertexShader:vShaderPathname 
-                                                andFragmentShader:fShaderPathname 
-                                                      andUniforms:pUniforms
-                                                     andBindBlock:^(GLuint name) {
-                                                         glBindAttribLocation(name, GLProgramAttributePosition, "position");
-                                                         glBindAttribLocation(name, GLProgramAttributeColor, "color");
-                                                     }];
-    if (tempProg == nil) {
+    fSource = [NSString stringWithContentsOfFile:fShaderPathname encoding:NSUTF8StringEncoding error:nil];
+    
+    ShaderProgram* program = ShaderProgram::namedInstance("main");
+    
+    vsrc = std::string([vSource UTF8String]);
+    fsrc = std::string([fSource UTF8String]);
+    
+    program->setVertexShader(vsrc);
+    program->setFragmentShader(fsrc);
+    if (!program->link()) {
         return NO;
     }
-    [GLProgram storeProgram:tempProg withIdentifier:@"main"];
-    
-    // texture shader
-    vShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"vsh"];
-    fShaderPathname = [[NSBundle mainBundle] pathForResource:@"TexShader" ofType:@"fsh"];
-	pUniforms = [NSArray arrayWithObjects:@"projection",@"cameraview",@"modelview",@"sampler",@"color",@"colored",nil];
-    tempProg = tempProg = [[GLProgram alloc] initWithVertexShader:vShaderPathname 
-                                                andFragmentShader:fShaderPathname 
-                                                      andUniforms:pUniforms
-                                                     andBindBlock:^(GLuint name) {
-                                                         glBindAttribLocation(name, GLProgramAttributePosition, "position");
-                                                         glBindAttribLocation(name, GLProgramAttributeTexCoord, "texcoord");
-                                                     }];
-    if (tempProg == nil) {
-        return NO;
-    }
-    [GLProgram storeProgram:tempProg withIdentifier:@"tex"];
-    
-    program = [GLProgram getProgramByIdentifier:@"main"];
-    ((GLES2DebugDraw*)internalRenderer)->program = [program name];
-    return TRUE;
+    glUseProgram(program->name());
+    ErrorHandler::checkErr("loadShaders");
+    return YES;
 }
 
 - (void)setScreenWidth:(float)width andHeight:(float)height {
@@ -185,7 +163,7 @@ Renderer* __es2Renderer = nil;
 
 #pragma mark -
 #pragma mark Rendering
-Sprite sprite;
+
 - (void)render:(b2World*)world {
     // clamp zoomScale
     
@@ -217,46 +195,23 @@ Sprite sprite;
             cameraview.multiply(postMatrix);
             Matrix modelview;
             
-            GLProgram* cvProg = [GLProgram getProgramByIdentifier:@"main"];
-            [cvProg use];
-            glUniformMatrix4fv([cvProg uniformLocationFor:@"projection"], 1, GL_FALSE, &projection.elements[0]);
-            glUniformMatrix4fv([cvProg uniformLocationFor:@"cameraview"], 1, GL_FALSE, &cameraview.elements[0]);
-            glUniformMatrix4fv([cvProg uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview.elements[0]);
-            glUniform1f([cvProg uniformLocationFor:@"alpha"], 1.0);
+            ShaderProgram* program = ShaderProgram::namedInstance("main");
+            glUniformMatrix4fv(program->uniform("projection"), 1, GL_FALSE, &projection.elements[0]);
+            glUniformMatrix4fv(program->uniform("cameraview"), 1, GL_FALSE, &cameraview.elements[0]);
+            glUniformMatrix4fv(program->uniform("modelview"), 1, GL_FALSE, &modelview.elements[0]);
+            glUniform1f(program->uniform("alpha"), 1.0);
             
             static bool done = false;
             if (!done) {
                 done = true;
-                VertexBufferObject redSquare;
-                redSquare.addAttributeData(Geometry::rectangle(0.0, 0.0, 20.0, 20.0), 2, GLProgramAttributePosition);
-                redSquare.addAttributeData(Color::colorBuffer(Color(1.0, 0.0, 0.0, 1.0), redSquare.vertexCount()), 4, GLProgramAttributeColor);
-                redSquare.glProgram = [cvProg name];
-                redSquare.glDrawMode = GL_TRIANGLE_FAN;
-                redSquare.store();
-                sprite.setUniformNames("modelview","alpha");
-                sprite.addVBO(redSquare);
-                sprite.alpha = 0.5;
             }
-            sprite.matrix.loadIdentity();
-            static float tick = 0.0;
-            sprite.vbos.at(0).glDrawMode = GL_TRIANGLE_FAN;
-            sprite.matrix.translate(Vec2(100.0*sin(tick), 0.0));
-            tick+=M_PI/360.0;
-            sprite.alpha = 0.4;
-            sprite.draw();
-            sprite.alpha = 1.0;
-            sprite.vbos.at(0).glDrawMode = GL_LINE_LOOP;
-            sprite.draw();
-            modelview.loadIdentity();
-            glUniformMatrix4fv([cvProg uniformLocationFor:@"modelview"], 1, GL_FALSE, &modelview.elements[0]);
-            glUniform1f([cvProg uniformLocationFor:@"alpha"], 1.0);
             break;
         }
         default:
             break;
     }
     
-    //[self drawDebugData];
+    [self drawScene];
     //internalRenderer->DrawOrigin();
     // clear our multiply matrix
     preMatrix.loadIdentity();
@@ -265,41 +220,46 @@ Sprite sprite;
     [self drawUserInterface];
 }
 
-- (void)drawDebugData {
+- (void)drawScene {
+    DrawableUserData* userData;
     b2World* world = [[MachineMashModel sharedModel] world];
 	for (b2Body* b = world->GetBodyList(); b; b = b->GetNext()) {
-        const b2Transform& xf = b->GetTransform();
-        for (b2Fixture* f = b->GetFixtureList(); f; f = f->GetNext()) {
-            if (b->IsActive() == false)
-            {
-                internalRenderer->DrawShape(f, xf, b2Color(1.0, 1.0, 0.0f));
+        userData = (DrawableUserData*)b->GetUserData();
+        if (userData == (DrawableUserData*)0) {
+            const b2Transform& xf = b->GetTransform();
+            for (b2Fixture* f = b->GetFixtureList(); f; f = f->GetNext()) {
+                userData = (DrawableUserData*)f->GetUserData();
+                if (userData == (DrawableUserData*)0) {
+                    if (b->IsActive() == false) {
+                        internalRenderer->DrawShape(f, xf, b2Color(1.0, 1.0, 0.0f));
+                    } else if (b->GetType() == b2_staticBody) {
+                        internalRenderer->DrawShape(f, xf, b2Color(0.0, 1.0, 1.0));
+                    } else if (b->GetType() == b2_kinematicBody) {
+                        internalRenderer->DrawShape(f, xf, b2Color(1.0, 0.0, 1.0));
+                    } else if (b->IsAwake() == false) {
+                        internalRenderer->DrawShape(f, xf, b2Color(0.6f, 0.6f, 0.6f));
+                    } else {
+                        internalRenderer->DrawShape(f, xf, b2Color(1.0, 1.0, 1.0));
+                    }
+                } else {
+                    userData->draw(f);
+                }
             }
-            else if (b->GetType() == b2_staticBody)
-            {
-                internalRenderer->DrawShape(f, xf, b2Color(0.0, 1.0, 1.0));
-            }
-            else if (b->GetType() == b2_kinematicBody)
-            {
-                internalRenderer->DrawShape(f, xf, b2Color(1.0, 0.0, 1.0));
-            }
-            else if (b->IsAwake() == false)
-            {
-                internalRenderer->DrawShape(f, xf, b2Color(0.6f, 0.6f, 0.6f));
-            }
-            else
-            {
-                internalRenderer->DrawShape(f, xf, b2Color(1.0, 1.0, 1.0));
-            }
+        } else {
+            userData->draw(b);
         }
     }
-    
 	for (b2Joint* j = world->GetJointList(); j; j = j->GetNext()) {
-        internalRenderer->DrawJoint(j);
+        userData = (DrawableUserData*)j->GetUserData();
+        if (userData == (DrawableUserData*)0) {
+            internalRenderer->DrawJoint(j);
+        } else {
+            userData->draw(j);
+        }
     }
 }
 
-- (void)drawUserInterface {
-}
+- (void)drawUserInterface {}
 
 #pragma mark -
 #pragma mark Texture

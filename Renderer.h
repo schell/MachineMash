@@ -12,7 +12,7 @@
 #import <OpenGLES/ES2/gl.h>
 #import "GLESDebugDraw.h"
 #import "GLProgram.h"
-#import "Matrix.h"
+#import "Graphics.h"
 
 #pragma mark -
 #pragma mark Renderer
@@ -43,5 +43,4 @@
 - (void)loadTexture:(NSString*)imageName;
 @property (readwrite,assign) GLESDebugDraw* internalRenderer;
 @property (readwrite,assign) uint api;
-@property (readwrite,retain) GLProgram* program;
 @end

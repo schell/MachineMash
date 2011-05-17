@@ -25,8 +25,9 @@ std::vector<float> Geometry::circle(float cx, float cy, float radius, float poin
     std::vector<float> circle;
     float inc = M_PI/points*2;
     for (float i = 0.0; i <= points; i++) {
-        float x = cx + cos(i*inc) * radius;
-        float y = cy + sin(i*inc) * radius;
+        float iinc = i*inc;
+        float x = cx + cos(iinc) * radius;
+        float y = cy + sin(iinc) * radius;
         circle.push_back(x); 
         circle.push_back(y);
     }
