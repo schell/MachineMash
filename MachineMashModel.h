@@ -19,6 +19,7 @@
 }
 + (MachineMashModel*)sharedModel;
 - (void)setGLESAPI:(int)api;
+- (void)setupLevel;
 - (void)step;
 - (b2World*)world;
 - (Level*)level;

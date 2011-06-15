@@ -48,7 +48,7 @@
 }
 
 - (Machine*)createPlayer {
-    return [[Machine alloc] initWithWorld:world];
+    return Machine::create(world);
 }
 
 #pragma -

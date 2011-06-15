@@ -35,6 +35,11 @@ public:
      *	@return void 
      */
     virtual void draw(void* parentPtr)=0;
+    //--------------------------------------
+    //  Variables   
+    //--------------------------------------
+    float scaleX;
+    float scaleY;
 };
 
 #endif

@@ -19,5 +19,6 @@
 #include "Color.h"
 #include "Buffer.h"
 #include "ShapeVAOs.h"
+#include "Texture.h"
 
 #endif

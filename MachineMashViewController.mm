@@ -53,9 +53,11 @@
             NSLog(@"%s could not load shaders...",__FUNCTION__);
         }
     }
-    
     if (![[Renderer sharedRenderer] loadTextures]) {
         NSLog(@"%s could not load textures...",__FUNCTION__);
+    }
+    if (![[Renderer sharedRenderer] loadAnimations]) {
+        NSLog(@"%s could not load animations...",__FUNCTION__);
     }
     
     animating = FALSE;
@@ -95,6 +97,7 @@
 #pragma View Events
 
 - (void)viewWillAppear:(BOOL)animated {
+    [[MachineMashModel sharedModel] setupLevel];
     [self startAnimation];
     [super viewWillAppear:animated];
 }

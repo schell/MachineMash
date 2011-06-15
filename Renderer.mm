@@ -11,10 +11,15 @@
 #include <vector>
 #import "Renderer.h"
 #import "MachineMashModel.h"
-#include "DrawableUserData.h"
+#include "Blit.h"
+#include "BlitAnimation.h"
+#include "UserAnimations.h"
+#include "UserBody.h"
+#include "UserJoint.h"
 
 #define ZOOM_MIN 2.0
 #define ZOOM_MAX 60.0
+#define PTM_RATIO 32.0
 
 @interface Renderer (PrivateMethods)
 - (void)drawScene;
@@ -90,9 +95,14 @@ Renderer* __es2Renderer = nil;
 #pragma mark Setup
 
 - (BOOL)loadTextures {
-    numberOfTextures = 1;
-    //    sheets = (spritesheet*)calloc(sizeof(spritesheet), 1);
-    //    sheets[0] = [self loadTexture:@"text.png"];
+    Texture animations = [self loadTexture:@"animation.png"];
+    animations.storeWithName("animation");
+    return YES;
+}
+
+- (BOOL)loadAnimations {
+    BlitAnimation* blity;
+    blity = UserAnimations::sharedInstance().tire1();
     return YES;
 }
 
@@ -120,7 +130,8 @@ void bindText(GLuint program) {
     }
     
     // main shader
-    ShaderProgram* program = ShaderProgram::namedInstance("main");
+    ShaderProgram* program;
+    program = ShaderProgram::namedInstance("main");
     if(!program->compileProgram("ShaderVaryingColor.vsh", "ShaderVaryingColor.fsh", &bindMain)) {
         return NO;
     }
@@ -129,8 +140,7 @@ void bindText(GLuint program) {
     if (!program->compileProgram("TexShader.vsh", "TexShader.fsh", &bindText)) {
         return NO;
     }
-    
-    glUseProgram(ShaderProgram::namedInstance("main")->name());
+    program->use();
     return YES;
 }
 
@@ -174,6 +184,8 @@ void bindText(GLuint program) {
     
     if (!GLisInitialized) {
         GLisInitialized = YES;
+        
+        glEnable(GL_TEXTURE_2D);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
@@ -190,6 +202,8 @@ void bindText(GLuint program) {
             break;
         }
         case 2: {
+            ShaderProgram* program = ShaderProgram::namedInstance("main");
+            program->use();
             float halfwidth = [self screenWidth]/2.0;
             float halfheight = [self screenHeight]/2.0;
             Matrix projection;
@@ -200,7 +214,6 @@ void bindText(GLuint program) {
             cameraview.multiply(postMatrix);
             Matrix modelview;
             
-            ShaderProgram* program = ShaderProgram::namedInstance("main");
             glUniformMatrix4fv(program->uniform("projection"), 1, GL_FALSE, &projection.elements[0]);
             glUniformMatrix4fv(program->uniform("cameraview"), 1, GL_FALSE, &cameraview.elements[0]);
             glUniformMatrix4fv(program->uniform("modelview"), 1, GL_FALSE, &modelview.elements[0]);
@@ -225,15 +238,46 @@ void bindText(GLuint program) {
     [self drawUserInterface];
 }
 
+void drawUserBody(b2Body* body, float screenWidth, float screenHeight) {
+    UserBody* userBody = (UserBody*)body->GetUserData();
+    BlitAnimation* blitimation = userBody->animation();
+	const b2Transform& xf = body->GetTransform();
+	b2Vec2 position = xf.position;
+    
+    ShaderProgram* texProg = ShaderProgram::namedInstance("text");
+    texProg->use();
+    
+    GLuint sampler,colored,color;
+    sampler = texProg->uniform("sampler");
+    colored = texProg->uniform("colored");
+    color = texProg->uniform("color");
+    glUniform1f(texProg->uniform("sampler"), 0);
+    glUniform1i(texProg->uniform("colored"), 1);
+    glUniform4f(texProg->uniform("color"), 0.0, 1.0, 1.0, 1.0);
+    
+    float halfwidth = screenWidth/2.0;
+    float halfheight = screenHeight/2.0;
+    
+    Matrix projection;
+    Matrix cameraview;
+    Matrix modelview;
+    modelview.translate(Vec2(position.x*PTM_RATIO, position.y*PTM_RATIO));
+    modelview.scale(userBody->scaleX, userBody->scaleY);
+    projection.loadOrtho(-halfwidth, halfwidth, halfheight, -halfheight, -1.0, 1.0);
+    glUniformMatrix4fv(texProg->uniform("projection"), 1, GL_FALSE, &projection.elements[0]);
+    glUniformMatrix4fv(texProg->uniform("cameraview"), 1, GL_FALSE, &cameraview.elements[0]);
+    glUniformMatrix4fv(texProg->uniform("modelview"), 1, GL_FALSE, &modelview.elements[0]);
+    blitimation->draw();
+}
+
 - (void)drawScene {
-    DrawableUserData* userData;
     b2World* world = [[MachineMashModel sharedModel] world];
 	for (b2Body* b = world->GetBodyList(); b; b = b->GetNext()) {
-        userData = (DrawableUserData*)b->GetUserData();
-        if (userData == (DrawableUserData*)0) {
+        UserBody* userBody = (UserBody*)b->GetUserData();
+        if (userBody == (UserBody*)0) {
             const b2Transform& xf = b->GetTransform();
             for (b2Fixture* f = b->GetFixtureList(); f; f = f->GetNext()) {
-                userData = (DrawableUserData*)f->GetUserData();
+                DrawableUserData* userData = (DrawableUserData*)f->GetUserData();
                 if (userData == (DrawableUserData*)0) {
                     if (b->IsActive() == false) {
                         internalRenderer->DrawShape(f, xf, b2Color(1.0, 1.0, 0.0f));
@@ -251,60 +295,73 @@ void bindText(GLuint program) {
                 }
             }
         } else {
-            userData->draw(b);
+            drawUserBody(b, [self screenWidth], [self screenHeight]);
         }
     }
 	for (b2Joint* j = world->GetJointList(); j; j = j->GetNext()) {
-        userData = (DrawableUserData*)j->GetUserData();
-        if (userData == (DrawableUserData*)0) {
+        UserJoint* userJoint = (UserJoint*)j->GetUserData();
+        if (userJoint == (UserJoint*)0) {
             internalRenderer->DrawJoint(j);
         } else {
-            userData->draw(j);
+            userJoint->draw(j);
         }
     }
 }
 
-- (void)drawUserInterface {}
+Texture icons;
+- (void)drawUserInterface {
+    ShaderProgram* texProg = ShaderProgram::namedInstance("text");
+    texProg->use();
+
+    GLuint sampler,colored,color;
+    sampler = texProg->uniform("sampler");
+    colored = texProg->uniform("colored");
+    color = texProg->uniform("color");
+    glUniform1f(texProg->uniform("sampler"), 0);
+    glUniform1i(texProg->uniform("colored"), 1);
+    glUniform4f(texProg->uniform("color"), 0.0, 1.0, 1.0, 1.0);
+    
+    float halfwidth = [self screenWidth]/2.0;
+    float halfheight = [self screenHeight]/2.0;
+    
+    Matrix identity;
+    Matrix projection;
+    projection.loadOrtho(-halfwidth, halfwidth, halfheight, -halfheight, -1.0, 1.0);
+    glUniformMatrix4fv(texProg->uniform("projection"), 1, GL_FALSE, &projection.elements[0]);
+    glUniformMatrix4fv(texProg->uniform("cameraview"), 1, GL_FALSE, &identity.elements[0]);
+    glUniformMatrix4fv(texProg->uniform("modelview"), 1, GL_FALSE, &identity.elements[0]);
+    BlitAnimation::step();
+}
 
 #pragma mark -
 #pragma mark Texture
 
-- (void)loadTexture:(NSString*)imageName {
-//    [[GLProgram getProgramByIdentifier:@"tex"] use];
-//    
-//    CGImageRef textureImage = [UIImage imageNamed:imageName].CGImage;
-//    spritesheet* tex = (spritesheet*)calloc(sizeof(spritesheet), 1);
-//    
-//    if (textureImage == nil) {
-//        NSLog(@"Failed to load texture image %@",imageName);
-//    } else {
-//        tex->width = CGImageGetWidth(textureImage);
-//        tex->height = CGImageGetHeight(textureImage);
-//        
-//        GLubyte *textureData = (GLubyte *)calloc(tex->width * tex->height, 4);
-//        
-//        CGContextRef textureContext = CGBitmapContextCreate(textureData, tex->width, tex->height, 8, tex->width * 4, CGImageGetColorSpace(textureImage), kCGImageAlphaPremultipliedLast);
-//        CGContextSetBlendMode(textureContext, kCGBlendModeCopy);
-//        CGContextDrawImage(textureContext, CGRectMake(0.0, 0.0, (float)tex->width, (float)tex->height), textureImage);
-//        
-//        CGContextRelease(textureContext);
-//        
-//        glGenTextures(1, &tex->texture);
-//        glBindTexture(GL_TEXTURE_2D, tex->texture);
-//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->width, tex->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
-//        
-//        free(textureData);
-//        
-//        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//        glEnable(GL_TEXTURE_2D);
-//        glEnable(GL_BLEND);
-//        glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-//    }
-//    spritesheet sheet;
-//    memcpy(&sheet, tex, sizeof(spritesheet));
-//    free(tex);
-//    return sheet;
+- (Texture)loadTexture:(NSString*)imageName {
+    ShaderProgram* program = ShaderProgram::namedInstance("text");
+    program->use();
+    
+    CGImageRef textureImage = [UIImage imageNamed:imageName].CGImage;
+    
+    Texture text;
+    
+    if (textureImage == nil) {
+        NSLog(@"Failed to load texture image %@",imageName);
+    } else {
+        GLuint width = CGImageGetWidth(textureImage);
+        GLuint height = CGImageGetHeight(textureImage);
+        
+        GLubyte *textureData = (GLubyte *)calloc(width * height, 4);
+        
+        CGContextRef textureContext = CGBitmapContextCreate(textureData, width, height, 8, width * 4, CGImageGetColorSpace(textureImage), kCGImageAlphaPremultipliedLast);
+        CGContextSetBlendMode(textureContext, kCGBlendModeCopy);
+        CGContextDrawImage(textureContext, CGRectMake(0.0, 0.0, (float)width, (float)height), textureImage);
+        CGContextRelease(textureContext);
+        
+        text = Texture(width, height, textureData);
+        
+        free(textureData);
+    }
+    return text;
 }
 
 @end

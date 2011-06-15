@@ -119,7 +119,7 @@ ShaderProgram* GLES2DebugDraw::shaderProgram() {
     return ShaderProgram::namedInstance("main");
 }
 
-void drawPolygonES2(const b2Vec2* vertices, int32 vertexCount, Color color, GLenum glDrawMode, GLuint program) {
+void drawPolygonES2(const b2Vec2* vertices, int32 vertexCount, Color color, GLenum glDrawMode) {
     std::vector<float> verts;
     for (int i = 0; i<vertexCount; i++) {
         verts.push_back(vertices[i].x); 
@@ -134,40 +134,40 @@ void drawPolygonES2(const b2Vec2* vertices, int32 vertexCount, Color color, GLen
 
 void GLES2DebugDraw::DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) {
     Color c(color.r, color.g, color.b, 1.0);
-    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP, this->shaderProgram()->name());
+    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP);
 }
 
 void GLES2DebugDraw::DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) {
     Color c(color.r, color.g, color.b, 0.5);
-    drawPolygonES2(vertices, vertexCount, c, GL_TRIANGLE_FAN, this->shaderProgram()->name());
+    drawPolygonES2(vertices, vertexCount, c, GL_TRIANGLE_FAN);
     c.a = 1.0;
-    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP, this->shaderProgram()->name());
+    drawPolygonES2(vertices, vertexCount, c, GL_LINE_LOOP);
 }
 
-void drawCircleES2(const b2Vec2& center, float32 radius, Color color, GLenum glDrawMode, GLuint program) {
+void drawCircleES2(const b2Vec2& center, float32 radius, Color color, GLenum glDrawMode, GLuint modelviewLocation) {
     GLuint circleVao = ShapeVAOs::sharedInstance()->circle();
     Matrix modelview;
     modelview.translate(Vec2(center.x, center.y));
     modelview.scale(radius, radius, 1.0);
-    glUniformMatrix4fv(glGetUniformLocation(program, "modelview"), 1, GL_FALSE, &modelview.elements[0]);
+    glUniformMatrix4fv(modelviewLocation, 1, GL_FALSE, &modelview.elements[0]);
     glBindVertexArrayOES(circleVao);
     glVertexAttrib4f(ShaderProgramAttributeColor, color.r, color.g, color.b, color.a);
     glDrawArrays(glDrawMode, 0, 361);
     glBindVertexArrayOES(0);
     modelview.loadIdentity();
-    glUniformMatrix4fv(glGetUniformLocation(program, "modelview"), 1, GL_FALSE, &modelview.elements[0]);
+    glUniformMatrix4fv(modelviewLocation, 1, GL_FALSE, &modelview.elements[0]);
 }
 
 void GLES2DebugDraw::DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color) {
     Color c(color.r, color.g, color.b, 1.0);
-    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->shaderProgram()->name());
+    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->shaderProgram()->uniform("modelview"));
 }
 
 void GLES2DebugDraw::DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color) {
     Color c(color.r, color.g, color.b, 0.5);
-    drawCircleES2(center, radius, c, GL_TRIANGLE_FAN, this->shaderProgram()->name());
+    drawCircleES2(center, radius, c, GL_TRIANGLE_FAN, this->shaderProgram()->uniform("modelview"));
     c.a = 1.0;
-    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->shaderProgram()->name());
+    drawCircleES2(center, radius, c, GL_LINE_LOOP, this->shaderProgram()->uniform("modelview"));
     this->DrawSegment(center, b2Vec2(center.x+radius*axis.x, center.y+radius*axis.y), color);
 }
 

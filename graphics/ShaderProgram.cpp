@@ -11,6 +11,7 @@
 #include "ErrorHandler.h"
 #include "Utilities.h"
 
+GLuint ShaderProgram::__currentProgramName = 0;
 std::map<std::string, ShaderProgram> ShaderProgram::__storedPrograms;
 
 ShaderProgram::ShaderProgram() {
@@ -139,6 +140,13 @@ GLuint ShaderProgram::uniform(std::string uniform) {
         it = this->_uniformLocations.find(uniform);
     }
     return (*it).second;
+}
+
+void ShaderProgram::use() {
+    if (ShaderProgram::__currentProgramName != this->_name) {
+        glUseProgram(this->_name);
+        ShaderProgram::__currentProgramName = this->_name;
+    }
 }
 
 ShaderProgram* ShaderProgram::namedInstance(std::string programName) {

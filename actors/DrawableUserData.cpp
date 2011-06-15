@@ -8,5 +8,5 @@
 
 #include "DrawableUserData.h"
 
-DrawableUserData::DrawableUserData() {}
+DrawableUserData::DrawableUserData():scaleX(1.0),scaleY(1.0) {}
 DrawableUserData::~DrawableUserData() {}

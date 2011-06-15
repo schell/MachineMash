@@ -32,6 +32,7 @@ public:
     bool compileProgram(std::string vshFile, std::string fshFile, bindBlockPtr bindBlock);
     GLuint name();
     GLuint uniform(std::string);
+    void use();
     static ShaderProgram* namedInstance(std::string programName);
 protected:
     GLuint _name;
@@ -39,6 +40,7 @@ protected:
     GLuint _fragShader;
     std::map<std::string,GLuint> _uniformLocations;
     static std::map<std::string, ShaderProgram> __storedPrograms;
+    static GLuint __currentProgramName;
 };
 
 #endif

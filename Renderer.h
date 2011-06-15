@@ -31,6 +31,7 @@
 + (Renderer*)ES2Renderer;
 - (BOOL)loadTextures;
 - (BOOL)loadShaders;
+- (BOOL)loadAnimations;
 - (void)setScreenWidth:(float)width andHeight:(float)height;
 - (void)render:(b2World*)world;
 - (void)drawUserInterface;
@@ -40,7 +41,7 @@
 - (Matrix*)postMultiplyMatrix;
 - (void)setZoomScale:(CGFloat)zoom;
 - (CGFloat)zoomScale;
-- (void)loadTexture:(NSString*)imageName;
+- (Texture)loadTexture:(NSString*)imageName;
 @property (readwrite,assign) GLESDebugDraw* internalRenderer;
 @property (readwrite,assign) uint api;
 @end

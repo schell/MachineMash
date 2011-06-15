@@ -25,8 +25,6 @@ static MachineMashModel* sharedModel = nil;
     [UIAccelerometer sharedAccelerometer].delegate = self;
     world = new b2World(gravity, doSleep);
     world->SetContinuousPhysics(true);
-    level = [[Level alloc] initWithWorld:world];
-    world->SetGravity([level gravityVector]);
     return self;
 }
 
@@ -56,6 +54,11 @@ static MachineMashModel* sharedModel = nil;
             [NSException raise:@"could not set GLES API" format:@"%i is not a GLES version"];
             break;
     }
+}
+
+- (void)setupLevel {
+    level = [[Level alloc] initWithWorld:world];
+    world->SetGravity([level gravityVector]);
 }
 
 #pragma -

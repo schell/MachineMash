@@ -6,8 +6,8 @@
 //  Copyright 2011 ModMash. All rights reserved.
 //
 
-#ifndef __USER_JOINT_CLASS__
-#define __USER_JOINT_CLASS__
+#ifndef __MOD_MASH_USER_JOINT_CLASS__
+#define __MOD_MASH_USER_JOINT_CLASS__
 
 #include <string>
 #include "DrawableUserData.h"

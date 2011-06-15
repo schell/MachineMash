@@ -25,7 +25,17 @@ public:
     /**
      *  Constructor
      */
-    Buffer() {}
+    Buffer():_elementCount(0) {}
+    /**
+     *	Constructor.
+     *  Adds data.
+     *
+     *	@param  std::vector<T> The initial data in this buffer.
+     *	@param  unsigned int The number of elements in the initial buffer.
+     */
+    Buffer(std::vector<T> data, unsigned int elementCount):data(data),_elementCount(elementCount) {
+        this->_offsets.push_back(0);
+    }
     /**
      *  Deconstructor
      */
@@ -39,6 +49,15 @@ public:
      */
     unsigned int stride() {
         return sizeof(T) * this->_elementCount;
+    }
+    /**
+     *	Returns the offset of the nth element.
+     *
+     *	@param  unsigned int The index of the element to return the offset of.
+     *	@return unsigned int The offset in bytes of the nth element.
+     */
+    unsigned int offsetOf(unsigned int n) {
+        return sizeof(T)*this->_offsets.at(n);
     }
     /**
      *	The number of vertices in this buffer.
@@ -72,6 +91,7 @@ public:
                 newData.push_back(buffer.at(v*elementCount+e));
             }
         }
+        this->_offsets.push_back(this->_elementCount);
         this->_elementCount += elementCount;
         this->data.clear();
         this->data.swap(newData);
@@ -83,6 +103,8 @@ public:
 protected:
     /** The number of elements in each vertex */
     unsigned int _elementCount;
+    /** An array holding the offsets of each vertex element */
+    std::vector<unsigned int> _offsets;
 };
 
 #endif
