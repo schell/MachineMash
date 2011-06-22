@@ -16,10 +16,10 @@
 #include "UserAnimations.h"
 #include "UserBody.h"
 #include "UserJoint.h"
+#include "Map.h"
 
 #define ZOOM_MIN 2.0
 #define ZOOM_MAX 60.0
-#define PTM_RATIO 32.0
 
 @interface Renderer (PrivateMethods)
 - (void)drawScene;
@@ -179,6 +179,22 @@ void bindText(GLuint program) {
 #pragma mark -
 #pragma mark Rendering
 
+void drawSquare(float rectangle[4], float color[4]) {
+    Matrix modelview;
+    ShaderProgram* program = ShaderProgram::namedInstance("main");
+    program->use();
+    Vec2 pos = Vec2(rectangle[0], rectangle[1]);
+    Vec2 size = Vec2(rectangle[2], rectangle[3]);
+    modelview.translate(pos);
+    modelview.scale(size.x(), size.y(), 1.0);
+    glUniformMatrix4fv(program->uniform("modelview"), 1, GL_FALSE, &modelview.elements[0]);
+    GLuint squareVAO = ShapeVAOs::sharedInstance()->square();
+    glBindVertexArrayOES(squareVAO);
+    glVertexAttrib4f(ShaderProgramAttributeColor, color[0], color[1], color[2], color[3]);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    glBindVertexArrayOES(0);
+}
+
 - (void)render:(b2World*)world {
     // clamp zoomScale
     
@@ -209,9 +225,9 @@ void bindText(GLuint program) {
             Matrix projection;
             projection.loadOrtho(-halfwidth, halfwidth, halfheight, -halfheight, -1.0, 1.0);
             Matrix cameraview;
-            cameraview.multiply(preMatrix);
-            cameraview.scale(zoomScale, zoomScale);
-            cameraview.multiply(postMatrix);
+            //cameraview.multiply(preMatrix);
+            //cameraview.scale(zoomScale, zoomScale);
+            //cameraview.multiply(postMatrix);
             Matrix modelview;
             
             glUniformMatrix4fv(program->uniform("projection"), 1, GL_FALSE, &projection.elements[0]);
@@ -219,9 +235,21 @@ void bindText(GLuint program) {
             glUniformMatrix4fv(program->uniform("modelview"), 1, GL_FALSE, &modelview.elements[0]);
             glUniform1f(program->uniform("alpha"), 1.0);
             
-            static bool done = false;
-            if (!done) {
-                done = true;
+            static int data[16] = { 1,0,0,0,
+                                    0,1,1,0,
+                                    0,1,1,0,
+                                    0,0,0,0};
+            float scale = 10.0;
+            float rect[4] = {-halfwidth+scale/2, halfheight-scale/2, scale, scale};
+            float black[4] = {0.0, 0.0, 0.0, 1.0};
+            float white[4] = {1.0, 1.0, 1.0, 1.0};
+            for (int y = 0; y < 4; y++) {
+                for (int x = 0; x < 4; x++) {
+                    int coord = y*4+x;
+                    float* color = data[coord] == 1 ? white : black;
+                    float dims[4] = {rect[0]+x*scale, rect[1]-y*scale, scale, scale};
+                    drawSquare(dims, color);
+                }
             }
             break;
         }
@@ -229,13 +257,13 @@ void bindText(GLuint program) {
             break;
     }
     
-    [self drawScene];
+    //[self drawScene];
     //internalRenderer->DrawOrigin();
     // clear our multiply matrix
     preMatrix.loadIdentity();
     postMatrix.loadIdentity();
     
-    [self drawUserInterface];
+    //[self drawUserInterface];
 }
 
 void drawUserBody(b2Body* body, float screenWidth, float screenHeight) {

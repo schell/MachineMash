@@ -48,7 +48,7 @@ Machine::Machine(b2World* world) {
     bd.position.Set(-1.5f, 0.25f);
     round.m_radius = 0.5f;
     lw = world->CreateBody(&bd);
-    lw->SetUserData(userTire);
+    //lw->SetUserData(userTire);
     fd.shape = &round;
     lw->CreateFixture(&fd);
     

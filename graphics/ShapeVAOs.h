@@ -37,11 +37,18 @@ public:
      *	@return GLuint
      */
     GLuint circle();
+    /**
+     *	Returns the id of a square shape VAO.
+     *
+     *	@return GLuint 
+     */
+    GLuint square();
     //--------------------------------------
     //  Variables
     //--------------------------------------
 private:
     GLuint _circle;
+    GLuint _square;
 };
 
 #endif
